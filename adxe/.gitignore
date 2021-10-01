@@ -1,0 +1,8 @@
+debug/
+win32_build19/
+cocos2d/
+win64_build19/
+.cocos-project.json
+*.tlog
+*.lastbuildstate
+*.ipch

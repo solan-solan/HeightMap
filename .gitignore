@@ -1,0 +1,12 @@
+debug/
+build_win32/
+win32_build/
+cocos2d/
+proj.win32/
+proj.linux/
+proj.ios_mac/
+*.tlog
+*.lastbuildstate
+*.ipch
+.idea/
+.cxx/
