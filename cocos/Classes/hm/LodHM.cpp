@@ -100,7 +100,7 @@ unsigned char LodHM::updateGLbuffer()
 	if (ret & (1 << (_lod_num - 1)))
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.is, _nextLayer.ie, _nextLayer.js, _nextLayer.je);
+		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
 		for (int q = 0; q < _layer_count; ++q)
 		    _layer_draw.at(q)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
 	}
@@ -114,7 +114,7 @@ unsigned char LodHM::updateGLbuffer()
 	if (_show_grid)
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.is, _nextLayer.ie, _nextLayer.js, _nextLayer.je);
+		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
 		_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
 		_customCommandGrid.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 	}
@@ -122,7 +122,7 @@ unsigned char LodHM::updateGLbuffer()
 	if (_norm_size)
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.is, _nextLayer.ie, _nextLayer.js, _nextLayer.je);
+		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
 		_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
 		updateNormBuffers();
 	}
@@ -266,6 +266,7 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 	unsigned int iArr = 0;
 
 	int jjj = 0;
+	NOT_DRAW n_draw(start_z, start_x, start_z + hLev * _hM->_prop._scale.z, start_x + wLev * _hM->_prop._scale.x, false);
 	for (float zp = start_z; jjj < _h; zp += levelMult() * _hM->_prop._scale.z, ++jjj) // For each string
 	{
 		int iii = 0;
@@ -306,6 +307,11 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
 				float mh = h1 + (h2 - h1) * dst;
+
+				// Remove 'last triangle' z - fighting
+				if (!((((iii + 1) ^ (_w - 1)) + jjj) * ((iii - 1) + (jjj ^ (_h - 1)))))
+					mh += _lod_num * 0.05f;
+
 				lVert[iArr].y = mh;
 			}
 
@@ -330,6 +336,11 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
 				float mh = h1 + (h2 - h1) * dst;
+
+				// Remove 'last triangle' z - fighting
+				if (!((((jjj + 1) ^ (_h - 1)) + iii) * ((jjj - 1) + (iii ^ (_w - 1)))))
+					mh += _lod_num * 0.05f;
+
 				lVert[iArr].y = mh;
 			}
 
@@ -362,7 +373,13 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
-				lVert[iArr].y = (h1 + h2) / 2;
+				float mh = (h1 + h2) / 2;
+
+				// Remove 'last triangle' z - fighting
+				if (!((((jjj + 1) ^ (_h - 1)) + (iii - 1)) * (((iii + 1) ^ (_w - 1)) + (jjj - 1))))
+					mh += _lod_num * 0.05f;
+
+				lVert[iArr].y = mh;
 			}
 
 			// Set vertex index
@@ -424,7 +441,7 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 	_lod_state = UPDATE_GL_BUFFER;
 
 	// Return the current drawn square
-	return NOT_DRAW(start_z, start_x, start_z + hLev * _hM->_prop._scale.z, start_x + wLev * _hM->_prop._scale.x, false);
+	return n_draw;
 }
 
 void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & transform, uint32_t flags)

@@ -16,8 +16,6 @@ uniform vec3 u_AmbColLight;
 
 vec3 computeLighting(vec3 normalVector, vec3 lightDirection)
 {
-    //float attenuation = 1.0;
-
     float attenuation = max(dot(normalVector, lightDirection), 0.3);
     float diffuse = max(dot(vec3(0.0, 1.0, 0.0), lightDirection), 0.0);
     vec3 diffuseColor = u_DirColLight  * diffuse * attenuation;

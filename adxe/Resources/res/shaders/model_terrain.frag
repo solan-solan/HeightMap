@@ -16,7 +16,6 @@
     varying mediump vec3 v_dirToCamera;
     
     varying mediump float v_alpha[LAYER_TEXTURE_SIZE];
-    varying mediump vec2 v_xz_ndraw;
 
     #ifdef NORMAL_MAP
         varying mediump vec3 v_DirLightSun;
@@ -40,7 +39,6 @@
     varying vec3 v_dirToCamera;
 
     varying float v_alpha[LAYER_TEXTURE_SIZE];
-    varying vec2 v_xz_ndraw;
 
     #ifdef NORMAL_MAP
         varying vec3 v_DirLightSun;
@@ -63,7 +61,6 @@
     uniform vec3 u_ColFog;
     uniform vec3 u_AmbientLightSourceColor;
     uniform float u_specular_factor[LAYER_TEXTURE_SIZE];
-    uniform vec4 u_Ndraw;
 
 vec3 computeLighting(vec3 normalVector, vec3 lightDirection, vec3 dirToCamera, float specular_factor)
 {
@@ -82,11 +79,7 @@ vec3 computeLighting(vec3 normalVector, vec3 lightDirection, vec3 dirToCamera, f
 }
 
 void main()
-{
-
-    if (all(bvec4(lessThan(v_xz_ndraw.xy, u_Ndraw.yw), greaterThan(v_xz_ndraw.xy, u_Ndraw.xz))) == true)
-        discard;
-    
+{    
     vec4 combinedColor = vec4(u_AmbientLightSourceColor, 1.0);
     
     vec4 color;
@@ -141,9 +134,6 @@ void main()
     #endif
 
     color = color * combinedColor * v_darker_dist;
-//    color.a = step(0.001, color.a);//max(max(v_alpha.r, v_alpha.g), max(v_alpha.b, v_alpha.a));
-//    color.a = max(max(v_alpha.r, v_alpha.g), max(v_alpha.b, v_alpha.a));
-
     color.a = max_v_alpha;
 
 #ifdef FOG

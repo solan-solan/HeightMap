@@ -30,11 +30,8 @@ namespace hm
 		// Lod's uniforms
 		struct ALL_LOD_LOC
 		{
-//			struct TEXTURE_LOC
-//			{
 			cocos2d::backend::UniformLocation _diff_loc;
 			cocos2d::backend::UniformLocation _norm_loc;
-//			} _textLoc[LAYER_TEXTURE_SIZE];
 			cocos2d::backend::UniformLocation _cam_pos_loc;
 			cocos2d::backend::UniformLocation _sun_light_dir;
 			cocos2d::backend::UniformLocation _sun_light_col;
@@ -51,8 +48,6 @@ namespace hm
 		struct ALL_LOD_LOC_GRID
 		{
 			cocos2d::backend::UniformLocation _vp;
-			cocos2d::backend::UniformLocation _width;
-			cocos2d::backend::UniformLocation _height;
 			cocos2d::backend::UniformLocation _scale;
 			cocos2d::backend::UniformLocation _ndraw;
 		} _allLodLocGrid;
@@ -61,8 +56,6 @@ namespace hm
 		struct ALL_LOD_LOC_NORM
 		{
 			cocos2d::backend::UniformLocation _vp;
-			cocos2d::backend::UniformLocation _width;
-			cocos2d::backend::UniformLocation _height;
 			cocos2d::backend::UniformLocation _scale;
 			cocos2d::backend::UniformLocation _ndraw;
 		} _allLodLocNorm;
@@ -74,57 +67,39 @@ namespace hm
 
 		struct ONEVERTEX
 		{
-			//float x = 0.0; // short
-			float y = 0; // short
-			//float z = 0.0; // short
-			
+			float y = 0;
 			float npack = 0;
-//			float nx = 0;
-//			float ny = 0;
-//			float nz = 0;
-			
-			//float nx = 0.0; // char
-			//float ny = 0.0; // char
-			//float nz = 0.0; // char
-//			float pack_xz = 0;
 			float x = 0;
 			float z = 0;
-//			float alpha = 255.0;
 			float alpha[MAX_LAYER_COUNT];
-			//float tx = 0.0; // float
-			//float ty = 0.0; // float
 			ONEVERTEX()
 			{
 				for (int i = 0; i < MAX_LAYER_COUNT; ++i)
 				    alpha[i] = ONE_HEIGHT_DEF_ALPHA;
 			}
-//			ONEVERTEX(char _y, float _n_pack)
-//			{
-//				y = _y; 
-//			}
 		};
 
 		struct NOT_DRAW
 		{
-			float js = 0;  // Index of the up left point on the texture
-			float is = 0;  // Index of the up left point on the texture
-			float je = 0;  // Index of the down right point on the texture
-			float ie = 0;  // Index of the down right point on the texture
-			bool needRedr = false; // To say the uplayer that redraw is needed
+			float zs = 0;  // z of the up left point
+			float xs = 0;  // x of the up left point
+			float ze = 0;  // z of the down right point
+			float xe = 0;  // x of the down right point
+			bool needRedr = false; // To say the up layer that redraw is needed
 			NOT_DRAW() {}
-			NOT_DRAW(float _js, float _is, float _je, float _ie, bool redr)
+			NOT_DRAW(float _zs, float _xs, float _ze, float _xe, bool redr)
 			{
-				js = _js; is = _is; je = _je; ie = _ie; needRedr = redr;
+				zs = _zs; xs = _xs; ze = _ze; xe = _xe; needRedr = redr;
 			}
 			bool operator !=(const NOT_DRAW& nd)
 			{
-				return (nd.js != js || nd.is != is || nd.je != je || nd.ie != ie);
+				return (nd.zs != zs || nd.xs != xs || nd.ze != ze || nd.xe != xe);
 			}
 			bool operator ==(const NOT_DRAW& nd)
 			{
-				return (nd.js == js && nd.is == is && nd.je == je && nd.ie == ie);
+				return (nd.zs == zs && nd.xs == xs && nd.ze == ze && nd.xe == xe);
 			}
-		} _nextLayer, _oldNextLayer; /* Next Layer, which has been drawn */
+		} _nextLayer;
 
 		// Colors of the lod GRID and NORMAL
 		static const cocos2d::Vec3 _lod_color[7];
@@ -144,19 +119,11 @@ namespace hm
 		// Up part of vertex array for normals
 		std::vector<ONEVERTEX> lVertNormUp;
 
-//#if EDITOR_ENGINE
-//		typedef int INDEX_TYPE;
-//		enum
-//		{
-//			cocos_index_format = cocos2d::CustomCommand::IndexFormat::U_INT
-//		};
-//#else
 		typedef unsigned short INDEX_TYPE;
 		enum
 		{
 			cocos_index_format = (int)cocos2d::CustomCommand::IndexFormat::U_SHORT
 		};
-//#endif
 
 	    // Indicies array
 		std::vector<INDEX_TYPE> iVert;
@@ -231,19 +198,8 @@ namespace hm
 			return _helper._level_mult_center;
 		}
 
-		// Get indecies of center on height map
-//		inline int centerPixIndX();
-//		inline int centerPixIndY();
-
-		// Get left up pixel indicies
-//		inline int startIndX();
-//		inline int startIndY();
-
-		// Get vertex scaled height
-//		inline unsigned char vertScaledHeight(unsigned int i, unsigned int j);
-
 		// Create Line indicies buffers 
-		//     This allow to see the landscape as a wire
+		// This allow to see the landscape as a wire
 		void createLineBuffers();
 
 		// Create buffers for normal
@@ -313,9 +269,6 @@ namespace hm
 				_next->showNormals(size);
 			_norm_size = size;
 		}
-
-		// Set texture tile size
-		//void setTextTileSize(float sz);
 
 		// Get first lod
 		const LodHM* getFirstLod() const { if (_next) return _next->getFirstLod(); else return this; }

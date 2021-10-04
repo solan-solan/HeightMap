@@ -13,9 +13,8 @@ attribute float a_vertex_z;
 #endif
 
 uniform vec3 u_camPos;
-
 uniform mat4 u_VPMatrix;
-
+uniform vec4 u_Ndraw;
 uniform float u_layer_num;
 uniform vec2 u_text_tile_size[LAYER_TEXTURE_SIZE];
 uniform vec3 u_scale;
@@ -52,7 +51,6 @@ uniform float u_darker_dist;
 	varying mediump vec3 v_dirToCamera;
 	varying mediump vec3 v_normal;
     varying mediump float v_alpha[LAYER_TEXTURE_SIZE];
-    varying mediump vec2 v_xz_ndraw;
 
     #ifdef NORMAL_MAP
         varying mediump vec3 v_DirLightSun;
@@ -73,7 +71,6 @@ uniform float u_darker_dist;
 	varying vec3 v_dirToCamera;
 	varying vec3 v_normal;
     varying float v_alpha[LAYER_TEXTURE_SIZE];
-    varying vec2 v_xz_ndraw;
 
     #ifdef NORMAL_MAP
         varying vec3 v_DirLightSun;
@@ -85,9 +82,9 @@ void main()
     float x = a_vertex_x;
     float z = a_vertex_z;
 
-    v_xz_ndraw = vec2(x, z);
+    vec2 xz_ndraw = vec2(x, z);
 
-    float h = a_height * u_scale.y;
+    float h = a_height * u_scale.y - 100000.0 * float(all(bvec4(lessThan(xz_ndraw.xy, u_Ndraw.yw), greaterThan(xz_ndraw.xy, u_Ndraw.xz))));
 
 	vec3 pos = vec3(x, h, z);
 

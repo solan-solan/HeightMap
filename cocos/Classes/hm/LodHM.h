@@ -81,23 +81,23 @@ namespace hm
 
 		struct NOT_DRAW
 		{
-			float js = 0;  // z of the up left point
-			float is = 0;  // x of the up left point
-			float je = 0;  // z of the down right point
-			float ie = 0;  // x of the down right point
+			float zs = 0;  // z of the up left point
+			float xs = 0;  // x of the up left point
+			float ze = 0;  // z of the down right point
+			float xe = 0;  // x of the down right point
 			bool needRedr = false; // To say the up layer that redraw is needed
 			NOT_DRAW() {}
-			NOT_DRAW(float _js, float _is, float _je, float _ie, bool redr)
+			NOT_DRAW(float _zs, float _xs, float _ze, float _xe, bool redr)
 			{
-				js = _js; is = _is; je = _je; ie = _ie; needRedr = redr;
+				zs = _zs; xs = _xs; ze = _ze; xe = _xe; needRedr = redr;
 			}
 			bool operator !=(const NOT_DRAW& nd)
 			{
-				return (nd.js != js || nd.is != is || nd.je != je || nd.ie != ie);
+				return (nd.zs != zs || nd.xs != xs || nd.ze != ze || nd.xe != xe);
 			}
 			bool operator ==(const NOT_DRAW& nd)
 			{
-				return (nd.js == js && nd.is == is && nd.je == je && nd.ie == ie);
+				return (nd.zs == zs && nd.xs == xs && nd.ze == ze && nd.xe == xe);
 			}
 		} _nextLayer;
 

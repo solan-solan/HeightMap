@@ -14,7 +14,6 @@ namespace hm
 #define ONE_HEIGHT_DEF_X 128
 #define ONE_HEIGHT_DEF_Y 255
 #define ONE_HEIGHT_DEF_Z 128
-	//#define ONE_HEIGHT_DEF_STATE ST_FREE
 #define ONE_HEIGHT_DEF_ALPHA 0xff000000
 #define ONE_HEIGHT_DEF_H -255
 
@@ -52,7 +51,6 @@ namespace hm
 				char gap = 0;
 			};
 			
-//			unsigned int alpha = ONE_HEIGHT_DEF_ALPHA;
 			LAYER_DATA lay[MAX_LAYER_COUNT];
 			float h = ONE_HEIGHT_DEF_H;
 		};
@@ -136,7 +134,6 @@ namespace hm
 			int i_recalc = i - i_chunk * _chunk_size;
 			int j_recalc = j - j_chunk * _chunk_size;
 
-//			int coeff_null = bool(_arr[j_chunk * _chunk_count_side + i_chunk]);
 			int coeff_null = (1 - ((((INTL(_arr[j_chunk * _chunk_count_w + i_chunk]) & up_0) - 1) >> (sizeof(INTL) * 8 - 2)) & 1));
 
 			return _arr[coeff_null * (j_chunk * _chunk_count_w + i_chunk) + (1 - coeff_null) * (_arr.size() - 1)]->getHeight(i_recalc, j_recalc, _chunk_size);
@@ -158,7 +155,6 @@ namespace hm
 			int i_recalc = i - i_chunk * _chunk_size;
 			int j_recalc = j - j_chunk * _chunk_size;
 
-//			int coeff_null = bool(_arr[j_chunk * _chunk_count_side + i_chunk]);
 			int coeff_null = (1 - ((((INTL(_arr[j_chunk * _chunk_count_w + i_chunk]) & up_0) - 1) >> (sizeof(INTL) * 8 - 2)) & 1));
 
 			*is_def = 1 - coeff_null;

@@ -161,8 +161,6 @@ bool HeightMap::init()
 void HeightMap::CreateLodLevels()
 {
 	_lods = new LodHM(this, _prop._lod_count);
-	
-//	_lods->setTextTileSize(_prop._lod_text_size);
 	_fLod = _lods->getFirstLod();
 }
 
@@ -200,9 +198,7 @@ void HeightMap::updateLodsGl()
 float HeightMap::getXtoNorm(float x, int* i_word_cell) const
 {
 	int coef = int(x / (-_helper._half_width * _prop._scale.x)) + int(x / ((_prop._width - 1) * _prop._scale.x));
-//	x += 5120.f * 2.f * coef;
 	x += ((_prop._width - 1) * _prop._scale.x) * coef;
-	//assert(abs(x) <= (_helper._half_width * _scale.x));
 
 	*i_word_cell = -coef;
 
@@ -212,9 +208,7 @@ float HeightMap::getXtoNorm(float x, int* i_word_cell) const
 float HeightMap::getZtoNorm(float z, int* j_word_cell) const
 {
 	int coef = int(z / (-_helper._half_height * _prop._scale.z)) + int(z / ((_prop._height - 1) * _prop._scale.z));
-//	z += 5120.f * 2.f * coef;
 	z += ((_prop._height - 1) * _prop._scale.z) * coef;
-	//assert(abs(z) <= (_helper._half_height * _scale.z));
 
 	*j_word_cell = -coef;
 
@@ -315,7 +309,7 @@ float HeightMap::getHeight(float x_world, float z_world, cocos2d::Vec3* n) const
 	if (z0 > z_world)
 	{
 		// The target point is under the line
-		x3 = x1 + (_prop._scale.x * _fLod->_helper._level_mult)/* * x_neg_coef*/;
+		x3 = x1 + (_prop._scale.x * _fLod->_helper._level_mult);
 		z3 = z1;
 
 		x_norm = getXtoNorm(x3, &i_chunk);
@@ -333,7 +327,7 @@ float HeightMap::getHeight(float x_world, float z_world, cocos2d::Vec3* n) const
 	{
 		// The target point is over the line
 		x3 = x1;
-		z3 = z1 + (_prop._scale.z * _fLod->_helper._level_mult)/* * z_neg_coef*/;
+		z3 = z1 + (_prop._scale.z * _fLod->_helper._level_mult);
 		
 		x_norm = getXtoNorm(x3, &i_chunk);
 		i_loc = xToI(x_norm);
@@ -750,7 +744,7 @@ void HeightMap::updateGrassGLbuffer()
 const OneChunk::ONE_HEIGHT& HeightMap::getTileData(float x_w, float z_w, std::pair<unsigned short, unsigned short>& _loc_idx)
 {
 	int j_chunk;
-	float z_loc = getXtoNorm(z_w, &j_chunk);
+	float z_loc = getZtoNorm(z_w, &j_chunk);
 	_loc_idx.second = zToJ(z_loc);
 
 	int i_chunk;
@@ -847,7 +841,7 @@ void HeightMap::stopUpdThread()
 	}
 }
 
-/*void HeightMap::loadHeightsFromFile(const std::string& path, LOAD_HEIGHTS_MODE load_mode, unsigned int layer_color_num)
+void HeightMap::loadHeightsFromFile(const std::string& path, LOAD_HEIGHTS_MODE load_mode, unsigned int layer_color_num)
 {
 	if (load_mode == LOAD_HEIGHTS_MODE::LOAD_LAYER_COLOR && layer_color_num >= _prop._layers.size())
 		return;
@@ -862,7 +856,10 @@ void HeightMap::stopUpdThread()
 	{
 		Vec3 pos;
 		Vec3 normal;
-		Vec4 layer_color[];
+		struct vec4
+		{
+			float x = 0.f; float y = 0.f; float z = 0.f; float w = 0.f;
+		} layer_color[];
 	};
 
 	if (loadFromFile(path, nodeDatas, meshdatas, materialdatas))
@@ -901,7 +898,11 @@ void HeightMap::stopUpdThread()
 				bool is_color_def = true;
 				for (int j = 0; j < layer_color_count; ++j)
 				{
-					Vec4 color = vertex->layer_color[j];
+					Vec4 color;
+					color.x = vertex->layer_color[j].x;
+					color.y = vertex->layer_color[j].y;
+					color.z = vertex->layer_color[j].z;
+					color.w = vertex->layer_color[j].w;
 					alpha[j] = color_to_alpha(color);
 					if (alpha[j] != ONE_HEIGHT_DEF_ALPHA)
 						is_color_def = false;
@@ -938,7 +939,7 @@ void HeightMap::stopUpdThread()
 	CC_SAFE_DELETE(nodeDatas);
 
 	_mutex.unlock();
-}*/
+}
 
 void HeightMap::loadHeightsFromFile_(const std::string& path, const std::vector<std::string>& layer_text)
 {
@@ -1013,8 +1014,10 @@ void HeightMap::loadHeightsFromFile_(const std::string& path, const std::vector<
 
 				p_world.x *= _prop._scale.x; p_world.z *= _prop._scale.z;
 
-				std::array<unsigned int, MAX_LAYER_COUNT> alpha;
-				alpha.fill(ONE_HEIGHT_DEF_ALPHA);
+				std::array<int, MAX_LAYER_COUNT> alpha;
+				std::array<int, MAX_LAYER_COUNT> alpha_def;
+				alpha_def.fill(0);
+				alpha_def[0] = ONE_HEIGHT_DEF_ALPHA;
 
 				bool is_color_def = true;
 				for (int j = 0; j < layer_color_count; ++j)
@@ -1025,7 +1028,7 @@ void HeightMap::loadHeightsFromFile_(const std::string& path, const std::vector<
 					Vec4 color = Vec4(pp[0] / 255.f, pp[1] / 255.f, pp[2] / 255.f, 0.f);
 
 					alpha[j] = color_to_alpha(color);
-					if (alpha[j] != ONE_HEIGHT_DEF_ALPHA)
+					if (alpha[j] != alpha_def[j])
 						is_color_def = false;
 				}
 
@@ -1099,7 +1102,7 @@ void HeightMap::loadHeightsFromFile(const std::string& path, const std::vector<s
 	if (loadFromFile(path, nodeDatas, meshdatas, materialdatas))
 	{
 		Vec3 first_pos = reinterpret_cast<VERTEX*>(meshdatas->meshDatas.at(0)->vertex.data())->pos;
-		const Mat4& tr = nodeDatas->nodes.at(0)->transform;
+		const Mat4& tr = getTransform(nodeDatas->nodes, meshdatas->meshDatas.at(0));
 		tr.transformPoint(&first_pos);
 
 		float x_min = first_pos.x, z_min = first_pos.z;
@@ -1161,11 +1164,6 @@ void HeightMap::loadHeightsFromFile(const std::string& path, const std::vector<s
 
 				p_world.x *= _prop._scale.x; p_world.z *= _prop._scale.z;
 
-				//test
-				if (p_world.x == 512.0 && p_world.z == -1008.0)
-					p_world.x *= 1.f;
-				//test
-
 				std::array<int, MAX_LAYER_COUNT> alpha;
 				std::array<int, MAX_LAYER_COUNT> alpha_def;
 				alpha_def.fill(0);
@@ -1211,19 +1209,6 @@ void HeightMap::loadHeightsFromFile(const std::string& path, const std::vector<s
 
 unsigned int HeightMap::color_to_alpha(Vec4& color)
 {
-//	if (color.x < 0.1f)
-//		color.x = 0.f;
-	
-//	if (color.y < 0.1f)
-//		color.y = 0.f;
-
-//	if (color.z < 0.1f)
-//		color.z = 0.f;
-
-//	float max_color = std::max(color.x, color.y);
-//	max_color = std::max(max_color, color.z);
-//	float max_color = std::min(1.f, color.x + color.y + color.z);
-//	color.w = 1.f - max_color;
 	color.w = 1.f - color.w;
 
 	typedef unsigned int uuiint;

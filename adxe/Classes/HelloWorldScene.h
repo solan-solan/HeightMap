@@ -71,8 +71,6 @@ private:
     void showNormal(cocos2d::Ref* sender, cocos2d::ui::CheckBox::EventType type);
     void changeSpeed(Ref* pSender, cocos2d::ui::Slider::EventType type);
     void sunDir(Ref* pSender, cocos2d::ui::Slider::EventType type);
-//    void heightSpecular(Ref* pSender, cocos2d::ui::Slider::EventType type);
-//    void textureSize(Ref* pSender, cocos2d::ui::Slider::EventType type);
 
 public:
     static cocos2d::Scene* createScene();

@@ -509,13 +509,13 @@ namespace hm
 		// Load heights from image for the certain HeightChunk
 		void loadHeightsFromImage(int i_chunk, int j_chunk, const std::string& height_map);
 
-		// Load heights from file *.c3b, alpha from vertex color
-		//void loadHeightsFromFile(const std::string& path, LOAD_HEIGHTS_MODE load_mode = LOAD_HEIGHTS_MODE::LOAD_HEIGHTS, unsigned int layer_color_num = 0);
+		// Load heights from file *.c3b, alpha from vertex color (not more than 65536 verticies, otherwise fbx->c3b tool breaks vertex color)
+		void loadHeightsFromFile(const std::string& path, LOAD_HEIGHTS_MODE load_mode = LOAD_HEIGHTS_MODE::LOAD_HEIGHTS, unsigned int layer_color_num = 0);
 
-		// Load heights from file *.c3b, alpha from map textures
+		// Load heights from file *.c3b, alpha from map textures (any count of verticies, since uv is calculated base vertex position)
 		void loadHeightsFromFile(const std::string& path, const std::vector<std::string>& layer_text);
 
-		// Load heights from file *.c3b, alpha from map textures
+		// Load heights from file *.c3b, alpha from map textures with uv as attribute (not more than 65536 verticies, otherwise fbx->c3b tool breaks vertex uv)
 		void loadHeightsFromFile_(const std::string& path, const std::vector<std::string>& layer_text);
 
 		// Launch update thread

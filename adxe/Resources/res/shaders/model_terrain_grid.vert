@@ -4,11 +4,8 @@ attribute float a_vertex_z;
 
 uniform mat4 u_VPMatrix;
 
-uniform float u_width;
-uniform float u_height;
 uniform vec3 u_scale;
 uniform vec4 u_Ndraw;
-
 
 void main()
 {

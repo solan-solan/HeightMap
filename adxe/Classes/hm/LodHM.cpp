@@ -74,8 +74,6 @@ LodHM::LodHM(HeightMap* hM, int lod_count)
 	// If not first lod
 	if (_lod_num > 1)
 	{
-//		_helper._level_mult = std::pow(2, _lay);
-//		_helper._level_mult_center = std::pow(2, _lay + 1);
 		_next = new LodHM(hM, _lod_num - 1);
 	}
 }
@@ -102,7 +100,7 @@ unsigned char LodHM::updateGLbuffer()
 	if (ret & (1 << (_lod_num - 1)))
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.is, _nextLayer.ie, _nextLayer.js, _nextLayer.je);
+		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
 		for (int q = 0; q < _layer_count; ++q)
 		    _layer_draw.at(q)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
 	}
@@ -110,16 +108,13 @@ unsigned char LodHM::updateGLbuffer()
 	if (_lod_state == NONE)
 		return ret;
 
-	// Set updated datas to OpenGL buffer
-	//_customCommand.updateVertexBuffer(&lVert[0], lVert.size() * sizeof(ONEVERTEX));
-
 	_layer_draw.at(0)._customCommand.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 
 #if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
 	if (_show_grid)
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.is, _nextLayer.ie, _nextLayer.js, _nextLayer.je);
+		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
 		_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
 		_customCommandGrid.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 	}
@@ -127,7 +122,7 @@ unsigned char LodHM::updateGLbuffer()
 	if (_norm_size)
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.is, _nextLayer.ie, _nextLayer.js, _nextLayer.je);
+		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
 		_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
 		updateNormBuffers();
 	}
@@ -171,9 +166,7 @@ void LodHM::createVertexArray()
 	_layer_draw.at(0)._customCommand.createIndexBuffer((CustomCommand::IndexFormat)cocos_index_format, iVert.size(), CustomCommand::BufferUsage::STATIC);
 
 	_layer_draw.at(0)._customCommand.updateVertexBuffer(&lVert[0], lVert.size() * sizeof(ONEVERTEX));
-	//_customCommand.updateVertexBuffer(&lVert[0], 0, lVert.size() * sizeof(ONEVERTEX));
 	_layer_draw.at(0)._customCommand.updateIndexBuffer(&iVert[0], iVert.size() * sizeof(INDEX_TYPE));
-	//_customCommand.updateIndexBuffer(&iVert[0], 0, iVert.size() * sizeof(unsigned short));
 
 	_layer_draw.at(0)._customCommand.setTransparent(false);
 	_layer_draw.at(0)._customCommand.set3D(true);
@@ -273,6 +266,7 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 	unsigned int iArr = 0;
 
 	int jjj = 0;
+	NOT_DRAW n_draw(start_z, start_x, start_z + hLev * _hM->_prop._scale.z, start_x + wLev * _hM->_prop._scale.x, false);
 	for (float zp = start_z; jjj < _h; zp += levelMult() * _hM->_prop._scale.z, ++jjj) // For each string
 	{
 		int iii = 0;
@@ -313,6 +307,11 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
 				float mh = h1 + (h2 - h1) * dst;
+
+				// Remove 'last triangle' z - fighting
+				if (!((((iii + 1) ^ (_w - 1)) + jjj) * ((iii - 1) + (jjj ^ (_h - 1)))))
+					mh += _lod_num * 0.05f;
+
 				lVert[iArr].y = mh;
 			}
 
@@ -337,6 +336,11 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
 				float mh = h1 + (h2 - h1) * dst;
+
+				// Remove 'last triangle' z - fighting
+				if (!((((jjj + 1) ^ (_h - 1)) + iii) * ((jjj - 1) + (iii ^ (_w - 1)))))
+					mh += _lod_num * 0.05f;
+
 				lVert[iArr].y = mh;
 			}
 
@@ -369,7 +373,13 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
-				lVert[iArr].y = (h1 + h2) / 2;
+				float mh = (h1 + h2) / 2;
+
+				// Remove 'last triangle' z - fighting
+				if (!((((jjj + 1) ^ (_h - 1)) + (iii - 1)) * (((iii + 1) ^ (_w - 1)) + (jjj - 1))))
+					mh += _lod_num * 0.05f;
+
+				lVert[iArr].y = mh;
 			}
 
 			// Set vertex index
@@ -431,7 +441,7 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 	_lod_state = UPDATE_GL_BUFFER;
 
 	// Return the current drawn square
-	return NOT_DRAW(start_z, start_x, start_z + hLev * _hM->_prop._scale.z, start_x + wLev * _hM->_prop._scale.x, false);
+	return n_draw;
 }
 
 void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & transform, uint32_t flags)
@@ -443,11 +453,7 @@ void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & tr
 	auto camera = Camera::getVisitingCamera();
 	const Mat4& view_proj_mat = camera->getViewProjectionMatrix();
 
-//	int layer_count = 1;
-//	if (this == _hM->_fLod)
-//		layer_count = _hM->_prop._layers.size();
-
-	for (int i = 0; i < _layer_count/*layer_count*/; ++i)
+	for (int i = 0; i < _layer_count; ++i)
 	{
 		auto& pipelineDescriptor = _layer_draw.at(i)._customCommand.getPipelineDescriptor();
 		pipelineDescriptor.programState = _layer_draw.at(i)._programState;
@@ -572,7 +578,7 @@ bool LodHM::rayCast(const cocos2d::Vec3 & start_p, const cocos2d::Vec3 & end_p, 
 	std::vector<cocos2d::Vec3> res;
 	res.reserve(10);
 
-	// Searching along all trialgles
+	// Searching along all triangles
 	for (unsigned int j = 0; j < _h - 1; ++j) // Lines
 		for (unsigned int i = 0; i < _w - 1; ++i) // Columns
 		{
@@ -818,20 +824,10 @@ void LodHM::createShader()
 		_layer_draw.at(0)._programState->setUniform(loc, &dist, sizeof(dist));
 	}
 
-//	loc = _layer_draw.at(0)._programState->getUniformLocation("u_lod_num");
-//	float lod_num = _lod_num;
-//	_layer_draw.at(0)._programState->setUniform(loc, &lod_num, sizeof(lod_num));
-
-	//const char* text_uniform[LAYER_TEXTURE_SIZE] = { "u_text_a", "u_text_b", "u_text_g", "u_text_r" };
-	//for (int i = 0; i < LAYER_TEXTURE_SIZE; ++i)
-	//    _allLodLoc._textLoc[i].diff = _layer_draw.at(0)._programState->getUniformLocation(text_uniform[i]);
 	_allLodLoc._diff_loc = _layer_draw.at(0)._programState->getUniformLocation("u_text");
 
 	if (_hM->_prop._is_normal_map)
 	{
-		//const char* text_uniform[LAYER_TEXTURE_SIZE] = { "u_text_an", "u_text_bn", "u_text_gn", "u_text_rn" };
-		//for (int i = 0; i < LAYER_TEXTURE_SIZE; ++i)
-		//    _allLodLoc._textLoc[i].norm = _layer_draw.at(0)._programState->getUniformLocation(text_uniform[i]);
 		_allLodLoc._norm_loc = _layer_draw.at(0)._programState->getUniformLocation("u_text_n");
 		
 		auto loc_normal_scale = _layer_draw.at(0)._programState->getUniformLocation("u_normal_scale");
@@ -856,7 +852,6 @@ void LodHM::createShader()
 		_layer_draw.at(0)._programState->setUniform(loc_layer_dist, &dist_layer, sizeof(Vec2));
 
 		// Copy null programState for all layers
-		//float dist_lod = _helper._half_w * _hM->_prop._scale.x * levelMult();
 		float dist_prev_lod = 0.f;
 		if (_lod_num > 1)
 			dist_prev_lod = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * _hM->_prop._scale.x * std::pow(2, _lod_num - 2); // Only for _lod_init == -1 and _lod_rank == 1
@@ -925,14 +920,6 @@ void LodHM::createShaderGrid()
 
 	_allLodLocGrid._vp = _programStateGrid->getUniformLocation("u_VPMatrix");
 
-	_allLodLocGrid._width = _programStateGrid->getUniformLocation("u_width");
-	float wh = _hM->_prop._width;
-	_programStateGrid->setUniform(_allLodLocGrid._width, &wh, sizeof(float));
-
-	_allLodLocGrid._height = _programStateGrid->getUniformLocation("u_height");
-	float hh = _hM->_prop._height;
-	_programStateGrid->setUniform(_allLodLocGrid._height, &hh, sizeof(float));
-
 	_allLodLocGrid._scale = _programStateGrid->getUniformLocation("u_scale");
 	_programStateGrid->setUniform(_allLodLocGrid._scale, &_hM->_prop._scale, sizeof(Vec3));
 
@@ -976,14 +963,6 @@ void LodHM::createShaderNorm()
 
 	_allLodLocNorm._vp = _programStateNorm->getUniformLocation("u_VPMatrix");
 
-	_allLodLocNorm._width = _programStateNorm->getUniformLocation("u_width");
-	float wh = _hM->_prop._width;
-	_programStateNorm->setUniform(_allLodLocNorm._width, &wh, sizeof(float));
-
-	_allLodLocNorm._height = _programStateNorm->getUniformLocation("u_height");
-	float hh = _hM->_prop._height;
-	_programStateNorm->setUniform(_allLodLocNorm._height, &hh, sizeof(float));
-
 	_allLodLocNorm._scale = _programStateNorm->getUniformLocation("u_scale");
 	_programStateNorm->setUniform(_allLodLocNorm._scale, &_hM->_prop._scale, sizeof(Vec3));
 
@@ -1016,18 +995,6 @@ void LodHM::updateSkyLightData()
 	}
 }
 
-//void LodHM::setTextTileSize(float sz)
-//{
-//	if (_next)
-//		_next->setTextTileSize(sz);
-
-//	for (int i = 0; i < _hM->_prop._layers.size(); ++i)
-//	{
-//		auto loc = _layer_draw.at(i)._programState->getUniformLocation("u_text_tile_size");
-//		_layer_draw.at(i)._programState->setUniform(loc, &sz, sizeof(sz));
-//	}
-//}
-
 void LodHM::setTextures()
 {
 	if (_next)
@@ -1043,7 +1010,6 @@ void LodHM::setTextures()
 			slots.push_back(j + text_slot);
 			txt.push_back(_hM->_layerData[i]._text[j].diff->getBackendTexture());
 		}
-		//_layer_draw.at(i)._programState->setTexture(_allLodLoc._textLoc[j].diff, text_slot + j, _hM->_layerData[i]._text[j].diff->getBackendTexture());
 		_layer_draw.at(i)._programState->setTextureArray(_allLodLoc._diff_loc, slots, txt);
 
 		if (_hM->_prop._is_normal_map)
@@ -1056,7 +1022,6 @@ void LodHM::setTextures()
 				slots.push_back(j + text_slot);
 				txt.push_back(_hM->_layerData[i]._text[j].norm->getBackendTexture());
 			}
-			//_layer_draw.at(i)._programState->setTexture(_allLodLoc._textLoc[j].norm, text_slot + j, _hM->_layerData[i]._text[j].norm->getBackendTexture());
 			_layer_draw.at(i)._programState->setTextureArray(_allLodLoc._norm_loc, slots, txt);
 		}
 	}
