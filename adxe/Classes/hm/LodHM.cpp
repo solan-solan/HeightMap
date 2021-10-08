@@ -103,7 +103,9 @@ unsigned char LodHM::updateGLbuffer()
 	if (ret & (1 << (_lod_num - 1)))
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+		Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
 		for (int q = 0; q < _layer_count; ++q)
 		    _layer_draw.at(q)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
 	}
@@ -117,7 +119,9 @@ unsigned char LodHM::updateGLbuffer()
 	if (_show_grid)
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+		Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
 		_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
 		_customCommandGrid.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 	}
@@ -125,7 +129,9 @@ unsigned char LodHM::updateGLbuffer()
 	if (_norm_size)
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+		Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
 		_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
 		updateNormBuffers();
 	}
@@ -793,8 +799,8 @@ void LodHM::createShader()
 		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
 		// _hM->_prop._width == _hM->_prop._height
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
-		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2.f) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
-		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2.f) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
+		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
 	}
 	radius_lod.y = (_lod_num - 1) * 0.01f;
 	_layer_draw.at(0)._programState->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
@@ -949,8 +955,8 @@ void LodHM::createShaderGrid()
 		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
 		// _hM->_prop._width == _hM->_prop._height
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
-		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2.f) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
-		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2.f) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
+		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
 	}
 	radius_lod.y = (_lod_num - 1) * 0.01f;
 	_programStateGrid->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
@@ -1008,8 +1014,8 @@ void LodHM::createShaderNorm()
 		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
 		// _hM->_prop._width == _hM->_prop._height
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
-		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2.f) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
-		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2.f) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
+		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
 	}
 	radius_lod.y = (_lod_num - 1) * 0.01f;
 	_programStateNorm->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));

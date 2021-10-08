@@ -3,8 +3,6 @@
 
     varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     varying mediump float v_lod_alpha;
-    varying mediump float v_noradius;
-    varying mediump float v_dist;
     #ifdef TEXT_LOD
         varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying mediump float v_dist_alpha;
@@ -30,8 +28,6 @@
 
     varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     varying float v_lod_alpha;
-    varying float v_noradius;
-    varying float v_dist;
     #ifdef TEXT_LOD
         varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying float v_dist_alpha;
@@ -88,9 +84,6 @@ vec3 computeLighting(vec3 normalVector, vec3 lightDirection, vec3 dirToCamera, f
 
 void main()
 {    
-    if (v_dist < v_noradius)
-        discard;
-
     vec4 combinedColor = vec4(u_AmbientLightSourceColor, 1.0);
     
     vec4 color;
