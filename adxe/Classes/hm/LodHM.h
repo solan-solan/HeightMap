@@ -50,6 +50,7 @@ namespace hm
 			cocos2d::backend::UniformLocation _vp;
 			cocos2d::backend::UniformLocation _scale;
 			cocos2d::backend::UniformLocation _ndraw;
+			cocos2d::backend::UniformLocation _cam_pos_loc;
 		} _allLodLocGrid;
 
 		// Loc's for normals
@@ -58,6 +59,7 @@ namespace hm
 			cocos2d::backend::UniformLocation _vp;
 			cocos2d::backend::UniformLocation _scale;
 			cocos2d::backend::UniformLocation _ndraw;
+			cocos2d::backend::UniformLocation _cam_pos_loc;
 		} _allLodLocNorm;
 
 	private:

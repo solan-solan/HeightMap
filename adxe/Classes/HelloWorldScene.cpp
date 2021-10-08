@@ -88,6 +88,8 @@ bool HelloWorld::init()
     /////////////////////////////
     // 3. add your codes below...
 
+	Director::getInstance()->setClearColor(Color4F(FOG_COLOR_FROM.x, FOG_COLOR_FROM.y, FOG_COLOR_FROM.z, 1.f));
+
     // Add 3d camera
     const auto& sz = Director::getInstance()->getWinSize();
     _cam = Camera::createPerspective(60.f, sz.width / sz.height, 0.1f, 800.f);
