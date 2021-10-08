@@ -100,7 +100,7 @@ unsigned char LodHM::updateGLbuffer()
 	if (_next)
 		ret |= _next->updateGLbuffer();
 
-	if (ret & (1 << (_lod_num - 1)))
+	if ((ret&~1) & (1 << (_lod_num - 1)))
 	{
 		// Set Not draw quad
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
@@ -116,7 +116,7 @@ unsigned char LodHM::updateGLbuffer()
 	_layer_draw.at(0)._customCommand.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 
 #if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
-	if (_show_grid)
+	if (_show_grid && _lod_num > 1)
 	{
 		// Set Not draw quad
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
@@ -126,7 +126,7 @@ unsigned char LodHM::updateGLbuffer()
 		_customCommandGrid.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 	}
 
-	if (_norm_size)
+	if (_norm_size && _lod_num > 1)
 	{
 		// Set Not draw quad
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
@@ -723,6 +723,9 @@ void LodHM::createShader()
 	std::string def = StringUtils::format("#define MAX_LAYER_COUNT %i\n", MAX_LAYER_COUNT);
 	def += StringUtils::format("#define LAYER_TEXTURE_SIZE %i\n", LAYER_TEXTURE_SIZE);
 
+	if (_lod_num == 1)
+		def += "#define FIRST_LOD\n";
+
 	if (_hM->_prop._lod_data.at(_lod_num - 1).text_lod_dist_to)
 		def += "#define TEXT_LOD\n";
 
@@ -787,23 +790,23 @@ void LodHM::createShader()
 	_allLodLoc._scale = _layer_draw.at(0)._programState->getUniformLocation("u_scale");
 	_layer_draw.at(0)._programState->setUniform(_allLodLoc._scale, &_hM->_prop._scale, sizeof(Vec3));
 	
-	_allLodLoc._ndraw = _layer_draw.at(0)._programState->getUniformLocation("u_Ndraw");
-	Vec4 n_draw = Vec4::ZERO;
-	_layer_draw.at(0)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
-
-	auto radiusLodLoc = _layer_draw.at(0)._programState->getUniformLocation("u_lod_radius");
-	Vec3 radius_lod;
 	if (_lod_num > 1)
 	{
+		_allLodLoc._ndraw = _layer_draw.at(0)._programState->getUniformLocation("u_Ndraw");
+		Vec4 n_draw = Vec4::ZERO;
+		_layer_draw.at(0)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
+
+		auto radiusLodLoc = _layer_draw.at(0)._programState->getUniformLocation("u_lod_radius");
+		Vec3 radius_lod;
 		// Works only for _lod_init == -1 and _lod_rank == 1, 
 		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
 		// _hM->_prop._width == _hM->_prop._height
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
 		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
 		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+		radius_lod.y = (_lod_num - 1) * 0.01f;
+		_layer_draw.at(0)._programState->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
 	}
-	radius_lod.y = (_lod_num - 1) * 0.01f;
-	_layer_draw.at(0)._programState->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
 
 	_allLodLoc._nearFogPlane = _layer_draw.at(0)._programState->getUniformLocation("u_near_fog_plane");
 	_allLodLoc._farFogPlane = _layer_draw.at(0)._programState->getUniformLocation("u_far_fog_plane");
@@ -915,7 +918,11 @@ void LodHM::createShaderGrid()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.frag"));
 
-	auto program = backend::Device::getInstance()->newProgram(vertexSource, fragmentSource);
+	std::string def;
+	if (_lod_num == 1)
+		def += "#define FIRST_LOD\n";
+
+	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	_programStateGrid = new backend::ProgramState(program);
 
 	auto & pipelineDescriptor = _customCommandGrid.getPipelineDescriptor();
@@ -943,23 +950,24 @@ void LodHM::createShaderGrid()
 	_allLodLocGrid._scale = _programStateGrid->getUniformLocation("u_scale");
 	_programStateGrid->setUniform(_allLodLocGrid._scale, &_hM->_prop._scale, sizeof(Vec3));
 
-	_allLodLocGrid._ndraw = _programStateGrid->getUniformLocation("u_Ndraw");
-	Vec4 n_draw = Vec4::ZERO;
-	_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
-
-	auto radiusLodLoc = _programStateGrid->getUniformLocation("u_lod_radius");
-	Vec3 radius_lod;
 	if (_lod_num > 1)
 	{
+		_allLodLocGrid._ndraw = _programStateGrid->getUniformLocation("u_Ndraw");
+		Vec4 n_draw = Vec4::ZERO;
+		_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
+
+		auto radiusLodLoc = _programStateGrid->getUniformLocation("u_lod_radius");
+		Vec3 radius_lod;
 		// Works only for _lod_init == -1 and _lod_rank == 1, 
 		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
 		// _hM->_prop._width == _hM->_prop._height
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
 		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
 		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+
+		radius_lod.y = (_lod_num - 1) * 0.01f;
+		_programStateGrid->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
 	}
-	radius_lod.y = (_lod_num - 1) * 0.01f;
-	_programStateGrid->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
 
 	_allLodLocGrid._cam_pos_loc = _programStateGrid->getUniformLocation("u_camPos");
 
@@ -974,7 +982,11 @@ void LodHM::createShaderNorm()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.frag"));
 
-	auto program = backend::Device::getInstance()->newProgram(vertexSource, fragmentSource);
+	std::string def;
+	if (_lod_num == 1)
+		def += "#define FIRST_LOD\n";
+
+	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	_programStateNorm = new backend::ProgramState(program);
 
 	auto& pipelineDescriptor = _customCommandNorm.getPipelineDescriptor();
@@ -1002,23 +1014,25 @@ void LodHM::createShaderNorm()
 	_allLodLocNorm._scale = _programStateNorm->getUniformLocation("u_scale");
 	_programStateNorm->setUniform(_allLodLocNorm._scale, &_hM->_prop._scale, sizeof(Vec3));
 
-	_allLodLocNorm._ndraw = _programStateNorm->getUniformLocation("u_Ndraw");
-	Vec4 n_draw = Vec4::ZERO;
-	_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
-
-	auto radiusLodLoc = _programStateNorm->getUniformLocation("u_lod_radius");
-	Vec3 radius_lod;
 	if (_lod_num > 1)
 	{
+		_allLodLocNorm._ndraw = _programStateNorm->getUniformLocation("u_Ndraw");
+		Vec4 n_draw = Vec4::ZERO;
+		_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
+
+		auto radiusLodLoc = _programStateNorm->getUniformLocation("u_lod_radius");
+		Vec3 radius_lod;
+		
 		// Works only for _lod_init == -1 and _lod_rank == 1, 
 		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
 		// _hM->_prop._width == _hM->_prop._height
 		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
 		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
 		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+
+		radius_lod.y = (_lod_num - 1) * 0.01f;
+		_programStateNorm->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
 	}
-	radius_lod.y = (_lod_num - 1) * 0.01f;
-	_programStateNorm->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
 
 	_allLodLocNorm._cam_pos_loc = _programStateNorm->getUniformLocation("u_camPos");
 

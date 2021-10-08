@@ -2,7 +2,9 @@
     precision mediump float;
 
     varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    varying mediump float v_lod_alpha;
+    #ifndef FIRST_LOD
+        varying mediump float v_lod_alpha;
+    #endif
     #ifdef TEXT_LOD
         varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying mediump float v_dist_alpha;
@@ -27,7 +29,9 @@
 #else
 
     varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    varying float v_lod_alpha;
+    #ifndef FIRST_LOD
+        varying float v_lod_alpha;
+    #endif
     #ifdef TEXT_LOD
         varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying float v_dist_alpha;
@@ -153,7 +157,9 @@ void main()
     color.a *= v_dist_alpha_layer;
 #endif
 
+#ifndef FIRST_LOD
     color.a *= v_lod_alpha;
+#endif
 
     gl_FragColor = color;
 }

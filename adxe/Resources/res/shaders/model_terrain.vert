@@ -14,8 +14,10 @@ attribute float a_vertex_z;
 
 uniform vec3 u_camPos;
 uniform mat4 u_VPMatrix;
-uniform vec4 u_Ndraw;
-uniform vec3 u_lod_radius;
+#ifndef FIRST_LOD
+    uniform vec4 u_Ndraw;
+    uniform vec3 u_lod_radius;
+#endif
 uniform float u_layer_num;
 uniform vec2 u_text_tile_size[LAYER_TEXTURE_SIZE];
 uniform vec3 u_scale;
@@ -38,7 +40,9 @@ uniform float u_darker_dist;
 
 #ifdef GL_ES
 	varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    varying mediump float v_lod_alpha;
+    #ifndef FIRST_LOD
+        varying mediump float v_lod_alpha;
+    #endif
     #ifdef TEXT_LOD
         varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying mediump float v_dist_alpha;
@@ -60,7 +64,9 @@ uniform float u_darker_dist;
     #endif
 #else
 	varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    varying float v_lod_alpha;
+    #ifndef FIRST_LOD
+        varying float v_lod_alpha;
+    #endif
     #ifdef TEXT_LOD
         varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying float v_dist_alpha;
@@ -87,24 +93,24 @@ void main()
     float x = a_vertex_x;
     float z = a_vertex_z;
 
+#ifndef FIRST_LOD
     vec2 xz_ndraw = vec2(x, z);
-
     float dist_x = distance(x, u_camPos.x);
     float dist_z = distance(z, u_camPos.z);
     float lod_alpha_x = 1.0;
     float lod_alpha_z = 1.0;
-    v_lod_alpha = 1.0;
-    if (u_lod_radius.z > 0.0)
-    {
-        lod_alpha_x = (dist_x - u_lod_radius.z) / (u_lod_radius.x - u_lod_radius.z);
-        lod_alpha_x = clamp(lod_alpha_x, 0.0, 1.0);
-        lod_alpha_z = (dist_z - u_lod_radius.z) / (u_lod_radius.x - u_lod_radius.z);
-        lod_alpha_z = clamp(lod_alpha_z, 0.0, 1.0);
-        v_lod_alpha = length(vec2(lod_alpha_x, lod_alpha_z));
-        v_lod_alpha = clamp(v_lod_alpha, 0.0, 1.0);
-    }
+    
+    lod_alpha_x = (dist_x - u_lod_radius.z) / (u_lod_radius.x - u_lod_radius.z);
+    lod_alpha_x = clamp(lod_alpha_x, 0.0, 1.0);
+    lod_alpha_z = (dist_z - u_lod_radius.z) / (u_lod_radius.x - u_lod_radius.z);
+    lod_alpha_z = clamp(lod_alpha_z, 0.0, 1.0);
+    v_lod_alpha = length(vec2(lod_alpha_x, lod_alpha_z));
+    v_lod_alpha = clamp(v_lod_alpha, 0.0, 1.0);
 
     float h = a_height * u_scale.y - 100000.0 * float(all(bvec4(lessThan(xz_ndraw.xy, u_Ndraw.yw), greaterThan(xz_ndraw.xy, u_Ndraw.xz))));
+#else
+    float h = a_height * u_scale.y;
+#endif
 
 	vec3 pos = vec3(x, h, z);
 
@@ -174,7 +180,10 @@ void main()
     v_layer_alpha = step(u_layer_num, 0.15);
 #endif
 
+#ifndef FIRST_LOD
     pp.z -= u_lod_radius.y;
+#endif
+
 	gl_Position = pp;
 
 #ifdef FOG
