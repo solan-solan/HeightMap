@@ -15,6 +15,9 @@ const Vec3 LodHM::_lod_color[7] = {
 	Vec3(1.f, 1.f, 1.f)   // WHITE
 };
 
+#define LOD_ALPHA_FROM_RATE 4
+#define LOD_ALPHA_TO_RATE 8
+
 std::atomic_char LodHM::_force_level_update = {0};
 
 LodHM::LodHM(HeightMap* hM, int lod_count)
@@ -97,10 +100,12 @@ unsigned char LodHM::updateGLbuffer()
 	if (_next)
 		ret |= _next->updateGLbuffer();
 
-	if (ret & (1 << (_lod_num - 1)))
+	if ((ret&~1) & (1 << (_lod_num - 1)))
 	{
 		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+		Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
 		for (int q = 0; q < _layer_count; ++q)
 		    _layer_draw.at(q)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
 	}
@@ -113,17 +118,27 @@ unsigned char LodHM::updateGLbuffer()
 #if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
 	if (_show_grid)
 	{
-		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
-		_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
+		if (_lod_num > 1)
+		{
+			// Set Not draw quad
+			float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+			float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+			Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
+			_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
+		}
 		_customCommandGrid.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 	}
 
 	if (_norm_size)
 	{
-		// Set Not draw quad
-		Vec4 n_draw = Vec4(_nextLayer.xs, _nextLayer.xe, _nextLayer.zs, _nextLayer.ze);
-		_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
+		if (_lod_num > 1)
+		{
+			// Set Not draw quad
+			float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+			float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+			Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
+			_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
+		}
 		updateNormBuffers();
 	}
 #endif
@@ -173,6 +188,13 @@ void LodHM::createVertexArray()
 	_layer_draw.at(0)._customCommand.setBeforeCallback(CC_CALLBACK_0(LodHM::onBeforeDraw, this));
 	_layer_draw.at(0)._customCommand.setAfterCallback(CC_CALLBACK_0(LodHM::onAfterDraw, this));
 
+	// Set blending
+	auto& blend = _layer_draw.at(0)._customCommand.getPipelineDescriptor().blendDescriptor;
+	blend.blendEnabled = true;
+	blend.sourceRGBBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
+	blend.destinationRGBBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+	blend.sourceAlphaBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
+	blend.destinationAlphaBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
 	for (int i = 1; i < _hM->_prop._layers.size(); ++i)
 	{
 		_layer_draw.at(i)._customCommand.setVertexBuffer(_layer_draw.at(0)._customCommand.getVertexBuffer());
@@ -308,10 +330,6 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 
 				float mh = h1 + (h2 - h1) * dst;
 
-				// Remove 'last triangle' z - fighting
-				if (!((((iii + 1) ^ (_w - 1)) + jjj) * ((iii - 1) + (jjj ^ (_h - 1)))))
-					mh += _lod_num * 0.05f;
-
 				lVert[iArr].y = mh;
 			}
 
@@ -336,10 +354,6 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
 				float mh = h1 + (h2 - h1) * dst;
-
-				// Remove 'last triangle' z - fighting
-				if (!((((jjj + 1) ^ (_h - 1)) + iii) * ((jjj - 1) + (iii ^ (_w - 1)))))
-					mh += _lod_num * 0.05f;
 
 				lVert[iArr].y = mh;
 			}
@@ -374,10 +388,6 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 				float h2 = _hM->HEIGHT(i_world_num, j_world_num, i, j).h;
 
 				float mh = (h1 + h2) / 2;
-
-				// Remove 'last triangle' z - fighting
-				if (!((((jjj + 1) ^ (_h - 1)) + (iii - 1)) * (((iii + 1) ^ (_w - 1)) + (jjj - 1))))
-					mh += _lod_num * 0.05f;
 
 				lVert[iArr].y = mh;
 			}
@@ -452,6 +462,7 @@ void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & tr
 	// Draw
 	auto camera = Camera::getVisitingCamera();
 	const Mat4& view_proj_mat = camera->getViewProjectionMatrix();
+	Vec3 c_pos = camera->getPosition3D();
 
 	for (int i = 0; i < _layer_count; ++i)
 	{
@@ -464,7 +475,6 @@ void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & tr
 		_layer_draw.at(i)._programState->setUniform(_allLodLoc._vp, view_proj_mat.m, sizeof(view_proj_mat.m));
 
 		// Set Camera pos
-		Vec3 c_pos = camera->getPosition3D();
 		_layer_draw.at(i)._programState->setUniform(_allLodLoc._cam_pos_loc, &c_pos, sizeof(c_pos));
 	}
 
@@ -475,6 +485,7 @@ void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & tr
 		renderer->addCommand(&_customCommandGrid);
 
 		_programStateGrid->setUniform(_allLodLocGrid._vp, view_proj_mat.m, sizeof(view_proj_mat.m));
+		_programStateGrid->setUniform(_allLodLocGrid._cam_pos_loc, &c_pos, sizeof(c_pos));
 	}
 
 	if (_norm_size)
@@ -483,6 +494,7 @@ void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & tr
 		renderer->addCommand(&_customCommandNorm);
 
 		_programStateNorm->setUniform(_allLodLocNorm._vp, view_proj_mat.m, sizeof(view_proj_mat.m));
+		_programStateNorm->setUniform(_allLodLocNorm._cam_pos_loc, &c_pos, sizeof(c_pos));
 	}
 #endif
 }
@@ -717,6 +729,9 @@ void LodHM::createShader()
 	std::string def = StringUtils::format("#define MAX_LAYER_COUNT %i\n", MAX_LAYER_COUNT);
 	def += StringUtils::format("#define LAYER_TEXTURE_SIZE %i\n", LAYER_TEXTURE_SIZE);
 
+	if (_lod_num == 1)
+		def += "#define FIRST_LOD\n";
+
 	if (_hM->_prop._lod_data.at(_lod_num - 1).text_lod_dist_to)
 		def += "#define TEXT_LOD\n";
 
@@ -781,9 +796,23 @@ void LodHM::createShader()
 	_allLodLoc._scale = _layer_draw.at(0)._programState->getUniformLocation("u_scale");
 	_layer_draw.at(0)._programState->setUniform(_allLodLoc._scale, &_hM->_prop._scale, sizeof(Vec3));
 	
-	_allLodLoc._ndraw = _layer_draw.at(0)._programState->getUniformLocation("u_Ndraw");
-	Vec4 n_draw = Vec4::ZERO;
-	_layer_draw.at(0)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
+	if (_lod_num > 1)
+	{
+		_allLodLoc._ndraw = _layer_draw.at(0)._programState->getUniformLocation("u_Ndraw");
+		Vec4 n_draw = Vec4::ZERO;
+		_layer_draw.at(0)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
+
+		auto radiusLodLoc = _layer_draw.at(0)._programState->getUniformLocation("u_lod_radius");
+		Vec3 radius_lod;
+		// Works only for _lod_init == -1 and _lod_rank == 1, 
+		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
+		// _hM->_prop._width == _hM->_prop._height
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
+		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+		radius_lod.y = (_lod_num - 1) * 0.01f;
+		_layer_draw.at(0)._programState->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
+	}
 
 	_allLodLoc._nearFogPlane = _layer_draw.at(0)._programState->getUniformLocation("u_near_fog_plane");
 	_allLodLoc._farFogPlane = _layer_draw.at(0)._programState->getUniformLocation("u_far_fog_plane");
@@ -895,7 +924,11 @@ void LodHM::createShaderGrid()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.frag"));
 
-	auto program = backend::Device::getInstance()->newProgram(vertexSource, fragmentSource);
+	std::string def;
+	if (_lod_num == 1)
+		def += "#define FIRST_LOD\n";
+
+	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	_programStateGrid = new backend::ProgramState(program);
 
 	auto & pipelineDescriptor = _customCommandGrid.getPipelineDescriptor();
@@ -923,9 +956,26 @@ void LodHM::createShaderGrid()
 	_allLodLocGrid._scale = _programStateGrid->getUniformLocation("u_scale");
 	_programStateGrid->setUniform(_allLodLocGrid._scale, &_hM->_prop._scale, sizeof(Vec3));
 
-	_allLodLocGrid._ndraw = _programStateGrid->getUniformLocation("u_Ndraw");
-	Vec4 n_draw = Vec4::ZERO;
-	_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
+	if (_lod_num > 1)
+	{
+		_allLodLocGrid._ndraw = _programStateGrid->getUniformLocation("u_Ndraw");
+		Vec4 n_draw = Vec4::ZERO;
+		_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
+
+		auto radiusLodLoc = _programStateGrid->getUniformLocation("u_lod_radius");
+		Vec3 radius_lod;
+		// Works only for _lod_init == -1 and _lod_rank == 1, 
+		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
+		// _hM->_prop._width == _hM->_prop._height
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
+		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+
+		radius_lod.y = (_lod_num - 1) * 0.01f;
+		_programStateGrid->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
+	}
+
+	_allLodLocGrid._cam_pos_loc = _programStateGrid->getUniformLocation("u_camPos");
 
 	auto loc = _programStateGrid->getUniformLocation("u_color");
 	int idx = (_lod_num - 1) & ~8;
@@ -938,7 +988,11 @@ void LodHM::createShaderNorm()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.frag"));
 
-	auto program = backend::Device::getInstance()->newProgram(vertexSource, fragmentSource);
+	std::string def;
+	if (_lod_num == 1)
+		def += "#define FIRST_LOD\n";
+
+	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	_programStateNorm = new backend::ProgramState(program);
 
 	auto& pipelineDescriptor = _customCommandNorm.getPipelineDescriptor();
@@ -966,9 +1020,27 @@ void LodHM::createShaderNorm()
 	_allLodLocNorm._scale = _programStateNorm->getUniformLocation("u_scale");
 	_programStateNorm->setUniform(_allLodLocNorm._scale, &_hM->_prop._scale, sizeof(Vec3));
 
-	_allLodLocNorm._ndraw = _programStateNorm->getUniformLocation("u_Ndraw");
-	Vec4 n_draw = Vec4::ZERO;
-	_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
+	if (_lod_num > 1)
+	{
+		_allLodLocNorm._ndraw = _programStateNorm->getUniformLocation("u_Ndraw");
+		Vec4 n_draw = Vec4::ZERO;
+		_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
+
+		auto radiusLodLoc = _programStateNorm->getUniformLocation("u_lod_radius");
+		Vec3 radius_lod;
+		
+		// Works only for _lod_init == -1 and _lod_rank == 1, 
+		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
+		// _hM->_prop._width == _hM->_prop._height
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
+		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+
+		radius_lod.y = (_lod_num - 1) * 0.01f;
+		_programStateNorm->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
+	}
+
+	_allLodLocNorm._cam_pos_loc = _programStateNorm->getUniformLocation("u_camPos");
 
 	auto loc = _programStateNorm->getUniformLocation("u_color");
 	int idx = (_lod_num - 1) & ~8;

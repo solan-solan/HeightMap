@@ -116,23 +116,29 @@ unsigned char LodHM::updateGLbuffer()
 	_layer_draw.at(0)._customCommand.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 
 #if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
-	if (_show_grid && _lod_num > 1)
+	if (_show_grid)
 	{
-		// Set Not draw quad
-		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
-		float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
-		Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
-		_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
+		if (_lod_num > 1)
+		{
+			// Set Not draw quad
+			float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+			float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+			Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
+			_programStateGrid->setUniform(_allLodLocGrid._ndraw, &n_draw, sizeof(n_draw));
+		}
 		_customCommandGrid.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 	}
 
-	if (_norm_size && _lod_num > 1)
+	if (_norm_size)
 	{
-		// Set Not draw quad
-		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
-		float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
-		Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
-		_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
+		if (_lod_num > 1)
+		{
+			// Set Not draw quad
+			float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+			float mult = (LOD_ALPHA_TO_RATE + 2) * prev_mult;
+			Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
+			_programStateNorm->setUniform(_allLodLocNorm._ndraw, &n_draw, sizeof(n_draw));
+		}
 		updateNormBuffers();
 	}
 #endif

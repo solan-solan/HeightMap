@@ -2,12 +2,16 @@
     precision mediump float;
 
     varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
+    #ifndef FIRST_LOD
+        varying mediump float v_lod_alpha;
+    #endif
     #ifdef TEXT_LOD
         varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying mediump float v_dist_alpha;
     #endif
     #ifdef MULTI_LAYER
         varying mediump float v_dist_alpha_layer;
+        varying mediump float v_layer_alpha;
     #endif
     varying mediump float v_darker_dist;
     #ifdef FOG
@@ -25,12 +29,16 @@
 #else
 
     varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
+    #ifndef FIRST_LOD
+        varying float v_lod_alpha;
+    #endif
     #ifdef TEXT_LOD
         varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
         varying float v_dist_alpha;
     #endif
     #ifdef MULTI_LAYER
         varying float v_dist_alpha_layer;
+        varying float v_layer_alpha;
     #endif
     varying float v_darker_dist;
     #ifdef FOG
@@ -134,7 +142,12 @@ void main()
     #endif
 
     color = color * combinedColor * v_darker_dist;
-    color.a = max_v_alpha;
+
+#ifdef MULTI_LAYER
+    color.a = max(max_v_alpha, v_layer_alpha);
+#else
+    color.a = 1.0;
+#endif
 
 #ifdef FOG
     color = mix(vec4(u_ColFog, 1.0), color, v_fogFactor);
@@ -144,5 +157,9 @@ void main()
     color.a *= v_dist_alpha_layer;
 #endif
 
-   gl_FragColor = color;
+#ifndef FIRST_LOD
+    color.a *= v_lod_alpha;
+#endif
+
+    gl_FragColor = color;
 }
