@@ -17,7 +17,7 @@ namespace cocos2d
 }
 namespace hm
 {
-	class BaseScene;
+	class ShadowCamera;
 
 	extern HeightChunk def_i_chunk;
 	extern CenterArray<HeightChunk*, &def_i_chunk> def_j_chunks;
@@ -252,6 +252,9 @@ namespace hm
 		// Array of around HeightChunk
 		HeightChunk* _chunk_arr[9];
 		
+		// Shadow cameras
+		std::vector<ShadowCamera*> _shdw;
+
 		// Current chunk number
 		int _j_cur_chunk = 0x7fffffff;
 		int _i_cur_chunk = 0x7fffffff;
@@ -560,6 +563,12 @@ namespace hm
 
 		// Set grass texture
 		void setGrassText(const std::string& grass_text);
+
+		// Get shadow cameras
+		const std::vector<ShadowCamera*>& getShadowCameras() const
+		{
+			return _shdw;
+		}
 
 	private:
 

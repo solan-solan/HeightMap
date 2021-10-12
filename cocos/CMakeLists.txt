@@ -62,6 +62,8 @@ list(APPEND GAME_SOURCE
      Classes/hm/LodHM.cpp
      Classes/hm/HeightChunk.cpp
      Classes/hm/rjh.cpp
+     Classes/hm/RenderTexture3D.cpp
+     Classes/hm/ShadowCamera.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -71,6 +73,8 @@ list(APPEND GAME_HEADER
      Classes/hm/HeightChunk.h
      Classes/hm/CenterArray.h
      Classes/hm/rjh.h
+     Classes/hm/RenderTexture3D.h
+     Classes/hm/ShadowCamera.h
      )
 
 if(ANDROID)

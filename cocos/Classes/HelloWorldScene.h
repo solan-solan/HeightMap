@@ -29,6 +29,11 @@
 #include "hm/HeightMap.h"
 #include "ui/CocosGUI.h"
 
+namespace hm
+{
+    class ShadowCamera;
+};
+
 class HelloWorld : public cocos2d::Scene
 {
 
@@ -40,6 +45,12 @@ private:
     float _time_passed = 0.f;
     cocos2d::AmbientLight* _ambientLight = nullptr;
     cocos2d::DirectionLight* _directionalLight = nullptr;
+    hm::ShadowCamera* _shdw_cam = nullptr;
+    cocos2d::BillBoard* _sun = nullptr;
+
+    // Vector of visit methods coresponding to the Camera flag
+    typedef void(HelloWorld::* visit_ptr)(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
+    std::array<visit_ptr, 2> _visit;
 
     struct CAMERA_SETTINGS
     {
@@ -76,7 +87,10 @@ public:
     static cocos2d::Scene* createScene();
 
     virtual bool init();
-    
+    virtual void visit(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
+    void visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
+    void visit_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
+
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
     

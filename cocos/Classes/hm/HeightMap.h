@@ -17,7 +17,7 @@ namespace cocos2d
 }
 namespace hm
 {
-	class BaseScene;
+	class ShadowCamera;
 
 	extern HeightChunk def_i_chunk;
 	extern CenterArray<HeightChunk*, &def_i_chunk> def_j_chunks;
@@ -97,9 +97,9 @@ namespace hm
 		// Height Map property
 		struct HM_PROPERTY
 		{
-			float _load_scale = 0.f;     // Distance between sibling vertex while loading 
-			bool _is_normal_map = false; // Is normal map shuld be represented in the shader
-			float _darker_dist = 0.f;    // Distance where ground became darker
+			float _load_scale = 0.f;      // Distance between sibling vertex while loading 
+			bool _is_normal_map = false;  // Is normal map shuld be represented in the shader
+			float _darker_dist = 0.f;     // Distance where ground became darker
 
 			unsigned int _width = 1025;
 			unsigned int _height = 1025;
@@ -121,6 +121,8 @@ namespace hm
 				int height = 0;
 				float text_lod_dist_from = 0.f;
 				float text_lod_dist_to = 0.f;
+				bool is_shadow = false;
+				bool is_self_shadow = false;
 			};
 			std::vector<LOD_DATA> _lod_data;
 
@@ -248,10 +250,13 @@ namespace hm
 
 		// Grass index array
 		std::vector<unsigned short> _gInd;
-
+		
 		// Array of around HeightChunk
 		HeightChunk* _chunk_arr[9];
-		
+
+		// Shadow cameras
+		std::vector<ShadowCamera*> _shdw;
+
 		// Current chunk number
 		int _j_cur_chunk = 0x7fffffff;
 		int _i_cur_chunk = 0x7fffffff;
@@ -472,9 +477,10 @@ namespace hm
 
 		// draw object
 		virtual void draw(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags) override;
+		void draw_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags);
 
 		// Create HeightMap from Active LEVEL
-		static HeightMap* create(const std::string& prop_file);
+		static HeightMap* create(const std::string& prop_file, const std::vector<ShadowCamera*>& shdw_cams);
 
 		// Enable grass rendering
 		void enableGrass();
@@ -560,6 +566,12 @@ namespace hm
 
 		// Set grass texture
 		void setGrassText(const std::string& grass_text);
+
+		// Get shadow cameras
+		const std::vector<ShadowCamera*>& getShadowCameras() const
+		{
+			return _shdw;
+		}
 
 	private:
 

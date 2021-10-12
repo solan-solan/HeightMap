@@ -42,6 +42,9 @@ namespace hm
 			cocos2d::backend::UniformLocation _ndraw;
 			cocos2d::backend::UniformLocation _nearFogPlane;
 			cocos2d::backend::UniformLocation _farFogPlane;
+			//--
+			cocos2d::backend::UniformLocation _lVP_shadow_loc;
+			cocos2d::backend::UniformLocation _depth_loc;
 		} _allLodLoc;
 
 		// Loc's for grid shader
@@ -62,6 +65,15 @@ namespace hm
 			cocos2d::backend::UniformLocation _cam_pos_loc;
 		} _allLodLocNorm;
 
+		// Loc's for depth shadow shader
+		struct ALL_LOD_LOC_SHADOW
+		{
+			cocos2d::backend::UniformLocation _vp;
+			cocos2d::backend::UniformLocation _cam_pos_loc;
+			cocos2d::backend::UniformLocation _scale;
+			cocos2d::backend::UniformLocation _ndraw;
+		} _allLodLocShadow;
+
 	private:
 		bool _show_grid = false;
 
@@ -69,16 +81,24 @@ namespace hm
 
 		struct ONEVERTEX
 		{
-			float y = 0;
-			float npack = 0;
-			float x = 0;
-			float z = 0;
+			float y = 0.f;
+			float npack = 0.f;
+			float x = 0.f;
+			float z = 0.f;
 			float alpha[MAX_LAYER_COUNT];
 			ONEVERTEX()
 			{
 				for (int i = 0; i < MAX_LAYER_COUNT; ++i)
 				    alpha[i] = ONE_HEIGHT_DEF_ALPHA;
 			}
+		};
+
+		struct ONEVERTEX_SHADOW
+		{
+			float x = 0.f;
+			float z = 0.f;
+			float y = 0.f;
+			ONEVERTEX_SHADOW() {}
 		};
 
 		struct NOT_DRAW
@@ -114,6 +134,10 @@ namespace hm
 
 		// Lod number
 		unsigned int _lod_num = 0;
+
+		// Is shadow
+		bool _is_shadow = false;
+		bool _is_self_shadow = false;
 
 		// Landscape vertex massive
 		std::vector<ONEVERTEX> lVert;
@@ -155,6 +179,9 @@ namespace hm
 
 		// Program state to define shader for normals
 		cocos2d::backend::ProgramState* _programStateNorm = nullptr;
+
+		// Program state to define shader to draw to the depth texture
+		cocos2d::backend::ProgramState* _programStateShadow = nullptr;
 
 		// Command to draw Lod as grid
 		cocos2d::CustomCommand _customCommandGrid;
@@ -232,6 +259,12 @@ namespace hm
 		// Create shader for normals
 		void createShaderNorm();
 		
+		// Create shadow shader
+		void createShadowShader();
+
+		// Update shadow data
+		//void updateShadowData();
+
 		void onBeforeDraw();
 		void onAfterDraw();
 
@@ -249,6 +282,9 @@ namespace hm
 
 		// Draw landscape 
 		void drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & transform, uint32_t flags);
+
+		// Draw Landscape when Shadow camera  is active
+		void drawLandScapeShadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags);
 
 		// Get vertex count for this lod and underlying
 		unsigned int getvertexCount() const;

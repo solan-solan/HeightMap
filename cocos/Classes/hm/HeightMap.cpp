@@ -13,10 +13,11 @@ namespace hm
 	CenterArray<HeightChunk*, &def_i_chunk> def_j_chunks;
 }
 
-HeightMap* HeightMap::create(const std::string& prop_file)
+HeightMap* HeightMap::create(const std::string& prop_file, const std::vector<ShadowCamera*>& shdw_cams)
 {
 	auto* hm = new (std::nothrow) HeightMap();
 	hm->_prop_file = prop_file;
+	hm->_shdw = shdw_cams;
 
 	if (hm && hm->init())
 	{
@@ -137,6 +138,8 @@ void HeightMap::loadProps()
 		data.height = data.width;
 		data.text_lod_dist_from = RJH::getFloat(ld_it, "text_lod_dist_from");
 		data.text_lod_dist_to = RJH::getFloat(ld_it, "text_lod_dist_to");
+		data.is_shadow = RJH::getBool(ld_it, "is_shadow");
+		data.is_self_shadow = RJH::getBool(ld_it, "is_self_shadow");
 		_prop._lod_data.push_back(data);
 	}
 	_prop._lod_count = _prop._lod_data.size();
@@ -437,6 +440,11 @@ void HeightMap::draw(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform
 
 	if (_programState)
 		drawGrass(renderer, transform, flags);
+}
+
+void HeightMap::draw_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags)
+{
+	_lods->drawLandScapeShadow(renderer, transform, flags);
 }
 
 void HeightMap::updateHeights(const cocos2d::Vec3& p)

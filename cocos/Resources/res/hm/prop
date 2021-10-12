@@ -4,27 +4,37 @@
             {
                 "w_h": 65,
                 "text_lod_dist_from": 0.0,
-                "text_lod_dist_to": 10.0
+                "text_lod_dist_to": 10.0,
+                "is_shadow": true,
+                "is_self_shadow": true
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 40.0,
-                "text_lod_dist_to": 70.0
+                "text_lod_dist_to": 70.0,
+                "is_shadow": false,
+                "is_self_shadow": false
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 140.0,
-                "text_lod_dist_to": 180.0
+                "text_lod_dist_to": 180.0,
+                "is_shadow": false,
+                "is_self_shadow": false
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 0.0,
-                "text_lod_dist_to": 0.0
+                "text_lod_dist_to": 0.0,
+                "is_shadow": false,
+                "is_self_shadow": false
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 0.0,
-                "text_lod_dist_to": 0.0
+                "text_lod_dist_to": 0.0,
+                "is_shadow": false,
+                "is_self_shadow": false
             }
         ],
         "layers" : [
@@ -60,41 +70,6 @@
                     "first_lod_size": 0.5,
                     "scale_size_coef": 4.0,
                     "normal_map_scale": 1.0,
-                    "specular_factor": 0.0
-                }
-            },
-            {
-                "dist_view": 140.0,
-                "text_a": {
-                    "diffuse":"res/hm/layer_1/road.jpg",
-                    "normal":"res/hm/layer_1/road_n.jpg",
-                    "first_lod_size": 0.5,
-                    "scale_size_coef": 0.0,
-                    "normal_map_scale": 4.0,
-                    "specular_factor": 0.0
-                },
-                "text_b": {
-                    "diffuse":"res/hm/layer_1/rock.jpg",
-                    "normal":"res/hm/layer_1/rock_n.jpg",
-                    "first_lod_size": 4.0,
-                    "scale_size_coef": 8.0,
-                    "normal_map_scale": 4.0,
-                    "specular_factor": 0.0
-                },
-                "text_g": {
-                    "diffuse":"res/hm/layer_1/grass.jpg",
-                    "normal":"res/hm/layer_1/grass_n.jpg",
-                    "first_lod_size": 0.5,
-                    "scale_size_coef": 0.0,
-                    "normal_map_scale": 4.0,
-                    "specular_factor": 0.0
-                },
-                "text_r": {
-                    "diffuse":"res/hm/layer_1/cliff1.jpg",
-                    "normal":"res/hm/layer_1/cliff1_n.jpg",
-                    "first_lod_size": 2.0,
-                    "scale_size_coef": 8.0,
-                    "normal_map_scale": 4.0,
                     "specular_factor": 0.0
                 }
             }
