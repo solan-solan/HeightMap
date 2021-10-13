@@ -1,6 +1,10 @@
 #ifdef GL_ES
     precision mediump float;
 
+    #ifdef SHADOW
+        varying mediump vec4 v_smcoord;
+    #endif
+
     varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
         varying mediump float v_lod_alpha;
@@ -27,6 +31,10 @@
         varying mediump vec3 v_normal;
     #endif
 #else
+
+    #ifdef SHADOW
+        varying vec4 v_smcoord;
+    #endif
 
     varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
@@ -62,6 +70,11 @@
     uniform float u_normal_scale[LAYER_TEXTURE_SIZE];
 #endif
 
+#ifdef SHADOW
+    uniform sampler2D u_text_sh;
+    uniform vec2 u_texelSize_sh;
+#endif
+
 #ifndef NORMAL_MAP
     uniform vec3 u_DirLightSun;
 #endif
@@ -69,6 +82,40 @@
     uniform vec3 u_ColFog;
     uniform vec3 u_AmbientLightSourceColor;
     uniform float u_specular_factor[LAYER_TEXTURE_SIZE];
+
+#ifdef SHADOW
+    float shadowCalc()
+    { 
+        
+        vec4 shadowMapPosition_0 = v_smcoord / v_smcoord.w;
+
+        if (all(bvec2(all(bvec4(lessThanEqual(shadowMapPosition_0.xy, vec2(1.0, 1.0)), greaterThanEqual(shadowMapPosition_0.xy, vec2(0.0, 0.0)))),
+        all(bvec2(step(0.0, shadowMapPosition_0.z), step(shadowMapPosition_0.z, 1.0))))))
+        {
+            float shadow = 0.0;
+            vec2 texelSize = 1.0 / u_texelSize_sh;
+            // Add bias to reduce shadow acne (error margin)
+            float bias = 0.0005;
+
+            for (float x = -1.0; x <= 1.0; x += 1.0)
+            {
+                for (float y = -1.0; y <= 1.0; y += 1.0)
+                {
+                    float distanceFromLight = texture2D(u_text_sh, shadowMapPosition_0.st + vec2(x, y) * texelSize).z;
+
+                    // 1.0 = not in shadow (fragment is closer to light than the value stored in shadow map)
+                    // 0.0 = in shadow
+                    shadow += float(distanceFromLight > shadowMapPosition_0.z - bias);
+                }
+            }
+
+            shadow /= 9.0;
+            return shadow;
+        }
+        
+        return 1.0;
+    }
+#endif
 
 vec3 computeLighting(vec3 normalVector, vec3 lightDirection, vec3 dirToCamera, float specular_factor)
 {
@@ -87,7 +134,7 @@ vec3 computeLighting(vec3 normalVector, vec3 lightDirection, vec3 dirToCamera, f
 }
 
 void main()
-{    
+{
     vec4 combinedColor = vec4(u_AmbientLightSourceColor, 1.0);
     
     vec4 color;
@@ -142,6 +189,15 @@ void main()
     #endif
 
     color = color * combinedColor * v_darker_dist;
+
+#ifdef SHADOW
+    // If the fragment is not behind light view frustum
+    float shadow = shadowCalc();
+    // Scale 0.0-1.0 to 0.2-1.0
+    // otherways everything in shadow would be black
+    shadow = (shadow * 0.8) + 0.2;
+    color *= shadow;
+#endif
 
 #ifdef MULTI_LAYER
     color.a = max(max_v_alpha, v_layer_alpha);

@@ -10,8 +10,6 @@
 namespace hm
 {
 	class HeightMap;
-	class BaseScene;
-	class PathFinder;
 
 #define MIN_LOD_W 3
 #define MIN_LOD_H 3
@@ -42,6 +40,8 @@ namespace hm
 			cocos2d::backend::UniformLocation _ndraw;
 			cocos2d::backend::UniformLocation _nearFogPlane;
 			cocos2d::backend::UniformLocation _farFogPlane;
+			cocos2d::backend::UniformLocation _lVP_shadow_loc;
+			cocos2d::backend::UniformLocation _depth_loc;
 		} _allLodLoc;
 
 		// Loc's for grid shader
@@ -69,10 +69,10 @@ namespace hm
 
 		struct ONEVERTEX
 		{
-			float y = 0;
-			float npack = 0;
-			float x = 0;
-			float z = 0;
+			float y = 0.f;
+			float npack = 0.f;
+			float x = 0.f;
+			float z = 0.f;
 			float alpha[MAX_LAYER_COUNT];
 			ONEVERTEX()
 			{
@@ -114,6 +114,9 @@ namespace hm
 
 		// Lod number
 		unsigned int _lod_num = 0;
+
+		// Is shadow
+		bool _is_shadow = false;
 
 		// Landscape vertex massive
 		std::vector<ONEVERTEX> lVert;
@@ -176,8 +179,8 @@ namespace hm
 		{
 			int _level_mult_center = 4;
 			int _level_mult = 1;
-			int _half_w;
-			int _half_h;
+			int _half_w = 0;
+			int _half_h = 0;
 		} _helper;
 
 		// Previouse position index
@@ -231,7 +234,7 @@ namespace hm
 
 		// Create shader for normals
 		void createShaderNorm();
-		
+
 		void onBeforeDraw();
 		void onAfterDraw();
 

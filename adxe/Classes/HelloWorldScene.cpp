@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include "HelloWorldScene.h"
+#include "hm/ShadowCamera.h"
 
 USING_NS_CC;
 
@@ -31,6 +32,8 @@ USING_NS_CC;
 #define AMBIENT_COLOR_TO Vec3(1.f, 1.f, 1.f)
 #define FOG_COLOR_FROM Vec3(204.f / 255.f * 0.88f, 206.f / 255.f * 0.88f, 184.f / 255.f * 0.88f)
 #define FOG_COLOR_TO FOG_COLOR_FROM
+#define SHADOW_CAM_DIST 2.f
+#define DEPTH_TEXT_SIZE 1024.f
 
 Scene* HelloWorld::createScene()
 {
@@ -88,6 +91,9 @@ bool HelloWorld::init()
     /////////////////////////////
     // 3. add your codes below...
 
+    _visit[int(CameraFlag::USER1) >> 2] = &HelloWorld::visit_cmn;
+    _visit[int(CameraFlag::USER2) >> 2] = &HelloWorld::visit_shadow;
+
 	Director::getInstance()->setClearColor(Color4F(FOG_COLOR_FROM.x, FOG_COLOR_FROM.y, FOG_COLOR_FROM.z, 1.f));
 
     // Add 3d camera
@@ -105,7 +111,6 @@ bool HelloWorld::init()
     _ambientLight->setCameraMask((unsigned short)CameraFlag::USER1);
 
     Vec3 dir_l = Vec3(-1.f, -1.f, 0.f);
-    dir_l.normalize();
     _directionalLight = DirectionLight::create(dir_l, Color3B(DIRECTION_COLOR.x * 255.f,
         DIRECTION_COLOR.y * 255.f,
         DIRECTION_COLOR.z * 255.f));
@@ -115,7 +120,7 @@ bool HelloWorld::init()
 
     // Add player
     _player = Sprite3D::create("res/model/girl.c3b");
-    _player->setCameraMask((unsigned short)CameraFlag::USER1);
+    _player->setCameraMask((unsigned short)CameraFlag::USER1 | (unsigned short)CameraFlag::USER2);
     _player->setScale(0.0025f);
     addChild(_player);
 
@@ -135,7 +140,28 @@ bool HelloWorld::init()
     _settings._gor_vel = _player->getScale() * 15.f;
     _settings._vert_vel = _player->getScale() * 0.1f;
 
-    _height_map = hm::HeightMap::create("res/hm/prop");
+    // Create shadow camera
+    _shdw_cam = hm::ShadowCamera::create(SHADOW_CAM_DIST, SHADOW_CAM_DIST, SHADOW_CAM_DIST * 4.f, DEPTH_TEXT_SIZE);
+    _shdw_cam->setCameraFlag(CameraFlag::USER2);
+    _shdw_cam->setDepth(-3);
+    addChild(_shdw_cam);
+
+    // Add particle sun
+    _sun = BillBoard::create();
+    _sun->setCameraMask((unsigned short)CameraFlag::USER1);
+    _sun->setScale(0.002f);
+    addChild(_sun);
+
+    auto* prtcl = ParticleSun::create();
+    prtcl->setTexture(Director::getInstance()->getTextureCache()->addImage("res/texture/fire.png"));
+    prtcl->setCameraMask((unsigned short)CameraFlag::USER1);
+    prtcl->setScale(4.f);
+    prtcl->setPosition(Vec2(0.f, 0.f));
+    _sun->addChild(prtcl);
+    
+    // Create heightMap
+    // (Supported 1 shadow camera)
+    _height_map = hm::HeightMap::create("res/hm/prop", { _shdw_cam });
 
     // Load first part of the heights
     _height_map->loadHeightsFromFile("res/hm/height/region_1.c3b", 
@@ -152,7 +178,7 @@ bool HelloWorld::init()
 
     // Add house
     auto* house = Sprite3D::create("res/model/house.c3b");
-    house->setCameraMask((unsigned short)CameraFlag::USER1);
+    house->setCameraMask((unsigned short)CameraFlag::USER1 | (unsigned short)CameraFlag::USER2);
 
     house->setScale(house->getScale() *
         _height_map->getProperty()._scale.x *
@@ -332,6 +358,9 @@ void HelloWorld::setCameraBehind()
 
     _cam->setPosition3D(pos_cam);
     _cam->lookAt(Vec3(pos_player.x, pos_player.y + _player_settings._height * 0.7f, pos_player.z));
+
+    if (_shdw_cam)
+        updateSdwCamPos(pos_player, _directionalLight->getDirection());
 }
 
 void HelloWorld::update(float time)
@@ -497,7 +526,6 @@ void HelloWorld::sunDir(Ref* pSender, cocos2d::ui::Slider::EventType type)
         float alpha = float(slider->getPercent()) / float(slider->getMaxPercent());
         float dir_x = MathUtil::lerp(-1.f, 1.f, alpha);
         Vec3 dir_l = Vec3(dir_x, -1.f, 0.f);
-        dir_l.normalize();
         Vec3 amb_color = AMBIENT_COLOR_FROM;
         amb_color = amb_color.lerp(AMBIENT_COLOR_TO, tweenfunc::cubicEaseIn(alpha));
         Vec3 fog_color = FOG_COLOR_FROM;
@@ -506,5 +534,120 @@ void HelloWorld::sunDir(Ref* pSender, cocos2d::ui::Slider::EventType type)
     
         _directionalLight->setDirection(dir_l);
         _ambientLight->setColor(Color3B(amb_color.x * 255, amb_color.y * 255, amb_color.z * 255));
+    
+        setCameraBehind();
     }
+}
+
+void HelloWorld::updateSdwCamPos(const cocos2d::Vec3& pos, const cocos2d::Vec3& dir_l)
+{
+    cocos2d::Vec3 p = pos - dir_l * SHADOW_CAM_DIST;
+
+    Vec3 n;
+    float h = _height_map->getHeight(p.x, p.z, &n);
+    if (h > p.y)
+        p.y = h + 0.1f;
+
+    Vec3 frw;
+    _cam->getNodeToWorldTransform().getForwardVector(&frw);
+    frw.y = 0.f;
+
+    _sun->setPosition3D(p);
+    _shdw_cam->setPosition3D(p);
+    _shdw_cam->lookAt(pos + frw * 0.0001f);
+}
+
+void HelloWorld::visit(Renderer* renderer, const Mat4& parentTransform, uint32_t parentFlags)
+{
+    (this->*_visit[int(Camera::getVisitingCamera()->getCameraFlag()) >> 2])(renderer, parentTransform, parentFlags);
+}
+
+void HelloWorld::visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags)
+{
+    // quick return if not visible. children won't be drawn.
+    if (!_visible)
+    {
+        return;
+    }
+
+    uint32_t flags = processParentFlags(parentTransform, parentFlags);
+
+    // IMPORTANT:
+    // To ease the migration to v3.0, we still support the Mat4 stack,
+    // but it is deprecated and your code should not rely on it
+    _director->pushMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
+    _director->loadMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW, _modelViewTransform);
+
+    int i = 0;
+    if (!_children.empty())
+    {
+        sortAllChildren();
+        // draw children zOrder < 0
+        for (auto size = _children.size(); i < size; ++i)
+        {
+            auto node = _children.at(i);
+
+            if (node && node->getLocalZOrder() < 0)
+                node->visit(renderer, _modelViewTransform, flags);
+            else
+                break;
+        }
+
+        for (auto it = _children.cbegin() + i, itCend = _children.cend(); it != itCend; ++it)
+            (*it)->visit(renderer, _modelViewTransform, flags);
+    }
+
+    _director->popMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
+
+    // FIX ME: Why need to set _orderOfArrival to 0??
+    // Please refer to https://github.com/cocos2d/cocos2d-x/pull/6920
+    // reset for next frame
+    // _orderOfArrival = 0;
+}
+
+void HelloWorld::visit_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags)
+{
+    // quick return if not visible. children won't be drawn.
+    if (!_visible)
+        return;
+
+    uint32_t flags = processParentFlags(parentTransform, parentFlags);
+
+    // IMPORTANT:
+    // To ease the migration to v3.0, we still support the Mat4 stack,
+    // but it is deprecated and your code should not rely on it
+    _director->pushMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
+    _director->loadMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW, _modelViewTransform);
+
+    const auto* rt_cam = static_cast<const hm::ShadowCamera*>(Camera::getVisitingCamera());
+    
+    rt_cam->begin_render();
+
+    int i = 0;
+    if (!_children.empty())
+    {
+        sortAllChildren();
+        // draw children zOrder < 0
+        for (auto size = _children.size(); i < size; ++i)
+        {
+            auto node = _children.at(i);
+
+            if (node && node->getLocalZOrder() < 0)
+                node->visit(renderer, _modelViewTransform, flags);
+            else
+                break;
+        }
+
+        for (auto it = _children.cbegin() + i, itCend = _children.cend(); it != itCend; ++it)
+            (*it)->visit(renderer, _modelViewTransform, flags);
+    }
+
+    rt_cam->end_render();
+
+    _director->popMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
+
+    // FIX ME: Why need to set _orderOfArrival to 0??
+    // Please refer to https://github.com/cocos2d/cocos2d-x/pull/6920
+    // reset for next frame
+    // _orderOfArrival = 0;
 }

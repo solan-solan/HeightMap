@@ -15,11 +15,21 @@ uniform float u_size_max;
 uniform vec3 u_cam_pos;
 uniform vec2 u_dist_alpha;
 
+#ifdef SHADOW
+    uniform mat4 u_lVP_sh;
+#endif
+
 #ifdef GL_ES
+    #ifdef SHADOW
+        varying mediump vec4 v_smcoord;
+    #endif
     varying mediump vec2 v_texCoord;
     varying mediump vec3 v_normal;
     varying mediump float v_dist_alpha;
 #else
+    #ifdef SHADOW
+        varying vec4 v_smcoord;
+    #endif
     varying vec2 v_texCoord;
     varying vec3 v_normal;
     varying float v_dist_alpha;
@@ -51,6 +61,10 @@ void main()
 
     vertex += (u_speed * vec4(sin(angle1), 0.0, cos(angle2), 0.0)) * (1.0 - a_texCoord.y);
     v_normal = normalize(u_cam_pos - vec3(vertex));
+
+#ifdef SHADOW
+    v_smcoord = u_lVP_sh * vertex;
+#endif
 
     vertex = u_VPMatrix * vertex;
 

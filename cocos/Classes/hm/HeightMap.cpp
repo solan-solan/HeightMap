@@ -1,6 +1,8 @@
 #include "HeightMap.h"
 #include "rjh.h"
 #include "renderer/backend/Device.h"
+#include "ShadowCamera.h"
+#include "RenderTexture3D.h"
 
 using namespace hm;
 using namespace cocos2d;
@@ -13,10 +15,11 @@ namespace hm
 	CenterArray<HeightChunk*, &def_i_chunk> def_j_chunks;
 }
 
-HeightMap* HeightMap::create(const std::string& prop_file)
+HeightMap* HeightMap::create(const std::string& prop_file, const std::vector<ShadowCamera*>& shdw_cams)
 {
 	auto* hm = new (std::nothrow) HeightMap();
 	hm->_prop_file = prop_file;
+	hm->_shdw = shdw_cams;
 
 	if (hm && hm->init())
 	{
@@ -90,6 +93,7 @@ void HeightMap::loadProps()
 		_grass_prop._speed = RJH::getFloat(grass_obj, "speed", 0.f);
 		_grass_prop._size_min = RJH::getFloat(grass_obj, "size_min", 1.f);
 		_grass_prop._size_max = RJH::getFloat(grass_obj, "size_max", 1.f);
+		_grass_prop._is_shadow = RJH::getBool(grass_obj, "is_shadow") && _shdw.size();
 	}
 	_prop._chunk_count_h = RJH::getInt(height_data_obj, "lod_chunk_count_w_h");
 	_prop._chunk_count_w = _prop._chunk_count_h;
@@ -137,6 +141,7 @@ void HeightMap::loadProps()
 		data.height = data.width;
 		data.text_lod_dist_from = RJH::getFloat(ld_it, "text_lod_dist_from");
 		data.text_lod_dist_to = RJH::getFloat(ld_it, "text_lod_dist_to");
+		data.is_shadow = RJH::getBool(ld_it, "is_shadow") && _shdw.size();
 		_prop._lod_data.push_back(data);
 	}
 	_prop._lod_count = _prop._lod_data.size();
@@ -540,7 +545,11 @@ void HeightMap::createGrassShader()
 	std::string vert_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/grass_bb.vert");
 	std::string fr_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/grass_bb.frag");
 	
-	auto program = backend::Device::getInstance()->newProgram(vert_sh, fr_sh);
+	std::string def;
+	if (_grass_prop._is_shadow)
+		def += "#define SHADOW\n";
+
+	auto program = backend::Device::getInstance()->newProgram(def + vert_sh, def + fr_sh);
 	_programState = new backend::ProgramState(program);
 
 	auto& pipelineDescriptor = _grass_gl._customCommand.getPipelineDescriptor();
@@ -573,6 +582,29 @@ void HeightMap::createGrassShader()
 	_grass_gl._timeLoc = _programState->getUniformLocation("u_time");
 	_grass_gl._vpLoc = _programState->getUniformLocation("u_VPMatrix");
 	_grass_gl._camPosLoc = _programState->getUniformLocation("u_cam_pos");
+
+	if (_grass_prop._is_shadow)
+	{
+		_grass_gl._lVP_shadow_loc = _programState->getUniformLocation("u_lVP_sh");
+
+		const auto& cameras = getShadowCameras();
+		std::vector<Vec2> texel_size;
+		std::vector<uint32_t> slots;
+		std::vector<cocos2d::backend::TextureBackend*> txt;
+		auto texels_loc = _programState->getUniformLocation("u_texelSize_sh");
+		auto depth_loc = _programState->getUniformLocation("u_text_sh");
+		int text_slot = 1; // 0 slot is under grass texture
+		for (int j = 0; j < cameras.size(); ++j)
+		{
+			Size sz = cameras[j]->getRenderText()->getDepthText()->getContentSizeInPixels();
+			texel_size.push_back(Vec2(sz.width, sz.height));
+
+			slots.push_back(j + text_slot);
+			txt.push_back(cameras[j]->getRenderText()->getDepthText()->getBackendTexture());
+		}
+		_programState->setUniform(texels_loc, texel_size.data(), sizeof(Vec2) * texel_size.size());
+		_programState->setTextureArray(depth_loc, slots, txt);
+	}
 
 	// Set grass speed uniform
 	auto speedLoc = _programState->getUniformLocation("u_speed");
@@ -667,7 +699,7 @@ void HeightMap::setGrassText(const std::string& grass_text)
 		delete img;
 
 		auto textLoc = _programState->getUniformLocation("u_texture");
-		_programState->setTexture(textLoc, 1, _grassText->getBackendTexture());
+		_programState->setTexture(textLoc, 0, _grassText->getBackendTexture());
 	}
 }
 
@@ -704,6 +736,26 @@ void HeightMap::drawGrass(cocos2d::Renderer* renderer, const cocos2d::Mat4& tran
     // Set camera position
 	Vec3 camPos = Camera::getVisitingCamera()->getPosition3D();
 	_programState->setUniform(_grass_gl._camPosLoc, &camPos, sizeof(camPos));
+
+	if (_grass_prop._is_shadow)
+	{
+
+		static const cocos2d::Mat4 bias(
+			0.5f, 0.0f, 0.0f, 0.5f,
+			0.0f, 0.5f, 0.0f, 0.5f,
+			0.0f, 0.0f, 0.5f, 0.5f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		);
+
+		const auto& shadow_cameras = getShadowCameras();
+		std::vector<Mat4> lightPos;
+		for (int j = 0; j < shadow_cameras.size(); ++j)
+		{
+			auto lp = bias * shadow_cameras[j]->getViewProjectionMatrix();
+			lightPos.push_back(lp);
+		}
+		_programState->setUniform(_grass_gl._lVP_shadow_loc, lightPos.data(), sizeof(Mat4) * lightPos.size());
+	}
 }
 
 void HeightMap::enableGrass()

@@ -17,7 +17,7 @@ namespace cocos2d
 }
 namespace hm
 {
-	class BaseScene;
+	class ShadowCamera;
 
 	extern HeightChunk def_i_chunk;
 	extern CenterArray<HeightChunk*, &def_i_chunk> def_j_chunks;
@@ -97,9 +97,9 @@ namespace hm
 		// Height Map property
 		struct HM_PROPERTY
 		{
-			float _load_scale = 0.f;     // Distance between sibling vertex while loading 
-			bool _is_normal_map = false; // Is normal map shuld be represented in the shader
-			float _darker_dist = 0.f;    // Distance where ground became darker
+			float _load_scale = 0.f;      // Distance between sibling vertex while loading 
+			bool _is_normal_map = false;  // Is normal map shuld be represented in the shader
+			float _darker_dist = 0.f;     // Distance where ground became darker
 
 			unsigned int _width = 1025;
 			unsigned int _height = 1025;
@@ -121,6 +121,7 @@ namespace hm
 				int height = 0;
 				float text_lod_dist_from = 0.f;
 				float text_lod_dist_to = 0.f;
+				bool is_shadow = false;
 			};
 			std::vector<LOD_DATA> _lod_data;
 
@@ -203,6 +204,9 @@ namespace hm
 
 			// Time passed
 			float _time_passed = 0.f;
+
+			// Is shadow rendering
+			bool _is_shadow = false;
 		} _grass_prop;
 
 		struct GRASS_GL
@@ -217,6 +221,7 @@ namespace hm
 			cocos2d::backend::UniformLocation _timeLoc;
 			cocos2d::backend::UniformLocation _vpLoc;
 			cocos2d::backend::UniformLocation _camPosLoc;
+			cocos2d::backend::UniformLocation _lVP_shadow_loc;
 
 			unsigned int _mdl_cnt = 0;
 			unsigned int _draw_mdl_cnt = 0;
@@ -248,10 +253,13 @@ namespace hm
 
 		// Grass index array
 		std::vector<unsigned short> _gInd;
-
+		
 		// Array of around HeightChunk
 		HeightChunk* _chunk_arr[9];
-		
+
+		// Shadow cameras
+		std::vector<ShadowCamera*> _shdw;
+
 		// Current chunk number
 		int _j_cur_chunk = 0x7fffffff;
 		int _i_cur_chunk = 0x7fffffff;
@@ -439,10 +447,6 @@ namespace hm
 		// Returns 3D position of HeightMap according to the 2D touch and depend on the camera view angel
 		bool getHitResult(const cocos2d::Vec2& location_in_view, const cocos2d::Camera* cam, cocos2d::Vec3* res);
 
-		/*********** THREAD SAFE FUNCTIONS ***********************/
-		/* This function intended for update veticies array despite was changed camera position or not
-			lev - the number of levels which should be updated
-		*/
 		void forceUpdateHeightMap(unsigned char lev)
 		{
 			LodHM::_force_level_update = lev;
@@ -474,7 +478,7 @@ namespace hm
 		virtual void draw(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags) override;
 
 		// Create HeightMap from Active LEVEL
-		static HeightMap* create(const std::string& prop_file);
+		static HeightMap* create(const std::string& prop_file, const std::vector<ShadowCamera*>& shdw_cams);
 
 		// Enable grass rendering
 		void enableGrass();
@@ -560,6 +564,12 @@ namespace hm
 
 		// Set grass texture
 		void setGrassText(const std::string& grass_text);
+
+		// Get shadow cameras
+		const std::vector<ShadowCamera*>& getShadowCameras() const
+		{
+			return _shdw;
+		}
 
 	private:
 

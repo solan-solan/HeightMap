@@ -12,6 +12,10 @@ attribute float a_vertex_z;
     attribute float a_alpha;
 #endif
 
+#ifdef SHADOW
+    uniform mat4 u_lVP_sh;
+#endif
+
 uniform vec3 u_camPos;
 uniform mat4 u_VPMatrix;
 #ifndef FIRST_LOD
@@ -39,6 +43,9 @@ uniform float u_darker_dist;
 #endif
 
 #ifdef GL_ES
+    #ifdef SHADOW
+        varying mediump vec4 v_smcoord;
+    #endif
 	varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
         varying mediump float v_lod_alpha;
@@ -63,6 +70,9 @@ uniform float u_darker_dist;
         varying mediump vec3 v_DirLightSun;
     #endif
 #else
+    #ifdef SHADOW
+        varying vec4 v_smcoord;
+    #endif
 	varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
         varying float v_lod_alpha;
@@ -128,7 +138,7 @@ void main()
                 (z + text_tile_size) / (2.0 * text_tile_size));
         #endif
     }
-        
+
 #if MAX_LAYER_COUNT == 1
     float alpha = a_alpha;
 #else        
@@ -182,6 +192,13 @@ void main()
 
 #ifndef FIRST_LOD
     pp.z -= u_lod_radius.y;
+#endif
+
+#ifdef SHADOW
+    v_smcoord = u_lVP_sh * vec4(pos, 1.0);
+    #ifndef FIRST_LOD
+        v_smcoord.z -= u_lod_radius.y;
+    #endif
 #endif
 
 	gl_Position = pp;
