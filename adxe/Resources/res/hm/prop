@@ -4,27 +4,32 @@
             {
                 "w_h": 65,
                 "text_lod_dist_from": 0.0,
-                "text_lod_dist_to": 10.0
+                "text_lod_dist_to": 10.0,
+                "is_shadow": true
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 40.0,
-                "text_lod_dist_to": 70.0
+                "text_lod_dist_to": 70.0,
+                "is_shadow": false
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 140.0,
-                "text_lod_dist_to": 180.0
+                "text_lod_dist_to": 180.0,
+                "is_shadow": false
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 0.0,
-                "text_lod_dist_to": 0.0
+                "text_lod_dist_to": 0.0,
+                "is_shadow": false
             },
             {
                 "w_h": 129,
                 "text_lod_dist_from": 0.0,
-                "text_lod_dist_to": 0.0
+                "text_lod_dist_to": 0.0,
+                "is_shadow": false
             }
         ],
         "layers" : [
@@ -109,9 +114,10 @@
             "rate": 36,
             "tile_count_coef": 10, 
             "shift": 0.5,
-            "speed": 0.04,
-            "size_min": 0.1,
-            "size_max": 0.4
+            "speed": 0.02,
+            "size_min": 0.05,
+            "size_max": 0.2,
+            "is_shadow": true
         }
 	}
 }

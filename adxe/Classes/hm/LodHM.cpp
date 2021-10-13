@@ -1116,7 +1116,7 @@ void LodHM::setTextures()
 	for (int i = 0; i < _layer_count; ++i)
 	{
 		int text_slot = 0;
-		std::vector<uint32_t> slots;
+		std::vector<int> slots;
 		std::vector<cocos2d::backend::TextureBackend*> txt;
 		for (int j = 0; j < LAYER_TEXTURE_SIZE; ++j)
 		{
