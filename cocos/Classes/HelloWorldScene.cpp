@@ -642,6 +642,8 @@ void HelloWorld::visit_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& 
             (*it)->visit(renderer, _modelViewTransform, flags);
     }
 
+    _height_map->draw_shadow(renderer, _modelViewTransform, flags);
+
     rt_cam->end_render();
 
     _director->popMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);

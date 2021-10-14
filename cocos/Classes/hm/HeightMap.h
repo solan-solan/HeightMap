@@ -122,6 +122,7 @@ namespace hm
 				float text_lod_dist_from = 0.f;
 				float text_lod_dist_to = 0.f;
 				bool is_shadow = false;
+				bool is_self_shadow = false;
 			};
 			std::vector<LOD_DATA> _lod_data;
 
@@ -476,6 +477,7 @@ namespace hm
 
 		// draw object
 		virtual void draw(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags) override;
+		void draw_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags);
 
 		// Create HeightMap from Active LEVEL
 		static HeightMap* create(const std::string& prop_file, const std::vector<ShadowCamera*>& shdw_cams);

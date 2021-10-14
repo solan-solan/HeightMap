@@ -51,7 +51,9 @@ LodHM::LodHM(HeightMap* hM, int lod_count)
 	_helper._half_h = _h / 2;
 
 	_lod_num = lod_count;
+
 	_is_shadow = _hM->_prop._lod_data.at(_lod_num - 1).is_shadow;
+	_is_self_shadow = _hM->_prop._lod_data.at(_lod_num - 1).is_self_shadow;
 
 	int mult_step = (_lod_num + _hM->_prop._lod_init) * _hM->_prop._lod_rank;
 	int mult_center_step = (_lod_num + _hM->_prop._lod_init + 1) * _hM->_prop._lod_rank;
@@ -69,6 +71,10 @@ LodHM::LodHM(HeightMap* hM, int lod_count)
 
 	// Create shader for this Level of LodHM
 	createShader();
+
+	// Create shadow shader
+	if (_is_self_shadow)
+	    createShadowShader();
 
 #if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
 	// Create grid shader for this
@@ -110,6 +116,9 @@ unsigned char LodHM::updateGLbuffer()
 		Vec4 n_draw = Vec4(_nextLayer.xs + mult, _nextLayer.xe - mult, _nextLayer.zs + mult, _nextLayer.ze - mult);
 		for (int q = 0; q < _layer_count; ++q)
 		    _layer_draw.at(q)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
+	
+	    if (_is_self_shadow)
+		    _programStateShadow->setUniform(_allLodLocShadow._ndraw, &n_draw, sizeof(n_draw));
 	}
 
 	if (_lod_state == NONE)
@@ -454,6 +463,33 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 
 	// Return the current drawn square
 	return n_draw;
+}
+
+void LodHM::drawLandScapeShadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags)
+{
+	if (_next)
+		_next->drawLandScapeShadow(renderer, transform, flags);
+
+	if (_is_self_shadow)
+	{
+		// Draw
+		auto& pipelineDescriptor = _layer_draw.at(0)._customCommand.getPipelineDescriptor();
+		pipelineDescriptor.programState = _programStateShadow;
+		_layer_draw.at(0)._customCommand.init(0);
+		renderer->addCommand(&_layer_draw.at(0)._customCommand);
+
+		// Set VP
+		auto camera = Camera::getVisitingCamera();
+		const Mat4& view_proj_mat = camera->getViewProjectionMatrix();
+		_programStateShadow->setUniform(_allLodLocShadow._vp, view_proj_mat.m, sizeof(view_proj_mat.m));
+
+		// Set camera pos
+		if (_lod_num > 1)
+		{
+			Vec3 c_pos = camera->getPosition3D();
+			_programStateShadow->setUniform(_allLodLocShadow._cam_pos_loc, &c_pos, sizeof(c_pos));
+		}
+	}
 }
 
 void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & transform, uint32_t flags)
@@ -1087,6 +1123,63 @@ void LodHM::createShaderNorm()
 	int idx = (_lod_num - 1) & ~8;
 	Vec4 color = Vec4(_lod_color[idx].x, _lod_color[idx].y, _lod_color[idx].z, 1.f);
 	_programStateNorm->setUniform(loc, &color, sizeof(color));
+}
+
+void LodHM::createShadowShader()
+{
+	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/shadow_map.vert"));
+	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/shadow_map.frag"));
+
+	std::string def;
+
+	if (_lod_num == 1)
+		def += "#define FIRST_LOD\n";
+
+	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	_programStateShadow = new backend::ProgramState(program);
+
+	auto layout = _programStateShadow->getVertexLayout();
+
+	const auto & attributeInfo = _programStateShadow->getProgram()->getActiveAttributes();
+
+	const auto & iter1 = attributeInfo.find("a_height");
+	if (iter1 != attributeInfo.end())
+		layout->setAttribute("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
+
+	const auto & iter5 = attributeInfo.find("a_vertex_x");
+	if (iter5 != attributeInfo.end())
+		layout->setAttribute("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
+
+	const auto & iter6 = attributeInfo.find("a_vertex_z");
+	if (iter6 != attributeInfo.end())
+		layout->setAttribute("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
+
+	layout->setLayout(sizeof(ONEVERTEX));
+
+	_allLodLocShadow._vp = _programStateShadow->getUniformLocation("u_VPMatrix");
+
+	_allLodLocShadow._scale = _programStateShadow->getUniformLocation("u_scale");
+	_programStateShadow->setUniform(_allLodLocShadow._scale, &_hM->_prop._scale, sizeof(Vec3));
+
+	if (_lod_num > 1)
+	{
+		_allLodLocShadow._cam_pos_loc = _programStateShadow->getUniformLocation("u_camPos");
+
+		_allLodLocShadow._ndraw = _programStateShadow->getUniformLocation("u_Ndraw");
+		Vec4 n_draw = Vec4::ZERO;
+		_programStateShadow->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
+
+		auto radiusLodLoc = _programStateShadow->getUniformLocation("u_lod_radius");
+		Vec3 radius_lod;
+		// Works only for _lod_init == -1 and _lod_rank == 1, 
+		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
+		// _hM->_prop._width == _hM->_prop._height
+		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
+		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
+		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
+		radius_lod.y = (_lod_num - 1) * 0.01f;
+		_programStateShadow->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
+	}
 }
 
 void LodHM::updateSkyLightData()
