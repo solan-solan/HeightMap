@@ -44,13 +44,16 @@ uniform float u_darker_dist;
 #endif
 
 #ifdef GL_ES
+
     #ifdef SHADOW
         varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
         varying mediump float v_shadow_fade_dist;
     #endif
 	varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
-        varying mediump float v_lod_alpha;
+        varying mediump float v_height;
+        varying mediump vec2 v_dist_lod;
+        varying mediump vec2 v_lod_radius;
     #endif
     #ifdef TEXT_LOD
         varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
@@ -72,13 +75,16 @@ uniform float u_darker_dist;
         varying mediump vec3 v_DirLightSun;
     #endif
 #else
+
     #ifdef SHADOW
         varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
         varying float v_shadow_fade_dist;
     #endif
 	varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
-        varying float v_lod_alpha;
+        varying float v_height;
+        varying vec2 v_dist_lod;
+        varying vec2 v_lod_radius;
     #endif
     #ifdef TEXT_LOD
         varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
@@ -107,19 +113,11 @@ void main()
     float z = a_vertex_z;
 
 #ifndef FIRST_LOD
-    vec2 xz_ndraw = vec2(x, z);
-    float dist_x = distance(x, u_camPos.x);
-    float dist_z = distance(z, u_camPos.z);
-    float lod_alpha_x = 1.0;
-    float lod_alpha_z = 1.0;
-    
-    lod_alpha_x = (dist_x - u_lod_radius.z) / (u_lod_radius.x - u_lod_radius.z);
-    lod_alpha_x = clamp(lod_alpha_x, 0.0, 1.0);
-    lod_alpha_z = (dist_z - u_lod_radius.z) / (u_lod_radius.x - u_lod_radius.z);
-    lod_alpha_z = clamp(lod_alpha_z, 0.0, 1.0);
-    v_lod_alpha = length(vec2(lod_alpha_x, lod_alpha_z));
-    v_lod_alpha = clamp(v_lod_alpha, 0.0, 1.0);
+    v_lod_radius = vec2(u_lod_radius.x, u_lod_radius.z);
+    v_dist_lod.x = distance(x, u_camPos.x);
+    v_dist_lod.y = distance(z, u_camPos.z);
 
+    vec2 xz_ndraw = vec2(x, z);
     float h = a_height * u_scale.y - 100000.0 * float(all(bvec4(lessThan(xz_ndraw.xy, u_Ndraw.yw), greaterThan(xz_ndraw.xy, u_Ndraw.xz))));
 #else
     float h = a_height * u_scale.y;
@@ -194,6 +192,7 @@ void main()
 #endif
 
 #ifndef FIRST_LOD
+    v_height = h;
     pp.z -= u_lod_radius.y;
 #endif
 

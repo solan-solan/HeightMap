@@ -8,7 +8,9 @@
 
     varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
-        varying mediump float v_lod_alpha;
+        varying mediump float v_height;
+        varying mediump vec2 v_dist_lod;
+        varying mediump vec2 v_lod_radius;
     #endif
     #ifdef TEXT_LOD
         varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
@@ -40,7 +42,9 @@
 
     varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
-        varying float v_lod_alpha;
+        varying float v_height;
+        varying vec2 v_dist_lod;
+        varying vec2 v_lod_radius;
     #endif
     #ifdef TEXT_LOD
         varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
@@ -143,6 +147,18 @@ vec3 computeLighting(vec3 normalVector, vec3 lightDirection, vec3 dirToCamera, f
 
 void main()
 {
+#ifndef FIRST_LOD
+    float lod_alpha_x = (v_dist_lod.x - v_lod_radius.y) / (v_lod_radius.x - v_lod_radius.y);
+    lod_alpha_x = clamp(lod_alpha_x, 0.0, 1.0);
+    float lod_alpha_z = (v_dist_lod.y - v_lod_radius.y) / (v_lod_radius.x - v_lod_radius.y);
+    lod_alpha_z = clamp(lod_alpha_z, 0.0, 1.0);
+    float lod_alpha = length(vec2(lod_alpha_x, lod_alpha_z));
+    lod_alpha = clamp(lod_alpha, 0.0, 1.0);
+
+    if (lod_alpha < 0.2 && v_height >= -255.0)
+        discard;
+#endif
+
     vec4 combinedColor = vec4(u_AmbientLightSourceColor, 1.0);
     
     vec4 color;
@@ -223,7 +239,7 @@ void main()
 #endif
 
 #ifndef FIRST_LOD
-    color.a *= v_lod_alpha;
+    color.a *= lod_alpha;
 #endif
 
     gl_FragColor = color;
