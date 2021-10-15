@@ -16,19 +16,22 @@ uniform vec3 u_cam_pos;
 uniform vec2 u_dist_alpha;
 
 #ifdef SHADOW
-    uniform mat4 u_lVP_sh;
+    uniform mat4 u_lVP_sh[DEPTH_TEXT_COUNT];
+    uniform float u_shadow_fade_dist;
 #endif
 
 #ifdef GL_ES
     #ifdef SHADOW
-        varying mediump vec4 v_smcoord;
+        varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
+        varying mediump float v_shadow_fade_dist;
     #endif
     varying mediump vec2 v_texCoord;
     varying mediump vec3 v_normal;
     varying mediump float v_dist_alpha;
 #else
     #ifdef SHADOW
-        varying vec4 v_smcoord;
+        varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
+        varying float v_shadow_fade_dist;
     #endif
     varying vec2 v_texCoord;
     varying vec3 v_normal;
@@ -63,10 +66,16 @@ void main()
     v_normal = normalize(u_cam_pos - vec3(vertex));
 
 #ifdef SHADOW
-    v_smcoord = u_lVP_sh * vertex;
+    for (int i = 0; i < DEPTH_TEXT_COUNT; ++i)
+        v_smcoord[i] = u_lVP_sh[i] * vertex;
 #endif
 
     vertex = u_VPMatrix * vertex;
+
+#ifdef SHADOW
+    v_shadow_fade_dist = abs(vertex.z) / u_shadow_fade_dist;
+    v_shadow_fade_dist = clamp(v_shadow_fade_dist, 0.0, 1.0);
+#endif
 
     v_dist_alpha = 1.0 - (abs(vertex.z) - u_dist_alpha.x) / u_dist_alpha.y;
     v_dist_alpha = clamp(v_dist_alpha, 0.0, 1.0);

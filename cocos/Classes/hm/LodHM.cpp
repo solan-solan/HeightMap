@@ -52,8 +52,8 @@ LodHM::LodHM(HeightMap* hM, int lod_count)
 
 	_lod_num = lod_count;
 
-	_is_shadow = _hM->_prop._lod_data.at(_lod_num - 1).is_shadow;
-	_is_self_shadow = _hM->_prop._lod_data.at(_lod_num - 1).is_self_shadow;
+	_shdw_data.enable = _hM->_prop._lod_data.at(_lod_num - 1).shadow.enable;
+	_shdw_data.self = _hM->_prop._lod_data.at(_lod_num - 1).shadow.self;
 
 	int mult_step = (_lod_num + _hM->_prop._lod_init) * _hM->_prop._lod_rank;
 	int mult_center_step = (_lod_num + _hM->_prop._lod_init + 1) * _hM->_prop._lod_rank;
@@ -73,7 +73,7 @@ LodHM::LodHM(HeightMap* hM, int lod_count)
 	createShader();
 
 	// Create shadow shader
-	if (_is_self_shadow)
+	if (_shdw_data.self)
 	    createShadowShader();
 
 #if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
@@ -117,7 +117,7 @@ unsigned char LodHM::updateGLbuffer()
 		for (int q = 0; q < _layer_count; ++q)
 		    _layer_draw.at(q)._programState->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
 	
-	    if (_is_self_shadow)
+	    if (_shdw_data.self)
 		    _programStateShadow->setUniform(_allLodLocShadow._ndraw, &n_draw, sizeof(n_draw));
 	}
 
@@ -470,7 +470,7 @@ void LodHM::drawLandScapeShadow(cocos2d::Renderer* renderer, const cocos2d::Mat4
 	if (_next)
 		_next->drawLandScapeShadow(renderer, transform, flags);
 
-	if (_is_self_shadow)
+	if (_shdw_data.self)
 	{
 		// Draw
 		auto& pipelineDescriptor = _layer_draw.at(0)._customCommand.getPipelineDescriptor();
@@ -482,13 +482,6 @@ void LodHM::drawLandScapeShadow(cocos2d::Renderer* renderer, const cocos2d::Mat4
 		auto camera = Camera::getVisitingCamera();
 		const Mat4& view_proj_mat = camera->getViewProjectionMatrix();
 		_programStateShadow->setUniform(_allLodLocShadow._vp, view_proj_mat.m, sizeof(view_proj_mat.m));
-
-		// Set camera pos
-		if (_lod_num > 1)
-		{
-			Vec3 c_pos = camera->getPosition3D();
-			_programStateShadow->setUniform(_allLodLocShadow._cam_pos_loc, &c_pos, sizeof(c_pos));
-		}
 	}
 }
 
@@ -515,7 +508,7 @@ void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & tr
 		// Set Camera pos
 		_layer_draw.at(i)._programState->setUniform(_allLodLoc._cam_pos_loc, &c_pos, sizeof(c_pos));
 	
-		if (_is_shadow)
+		if (_shdw_data.enable)
 		{
 
 			static const cocos2d::Mat4 bias(
@@ -790,8 +783,8 @@ void LodHM::createShader()
 	if (_lod_num == 1)
 		def += "#define FIRST_LOD\n";
 
-	if (_is_shadow)
-		def += "#define SHADOW\n";
+	if (_shdw_data.enable)
+		def += StringUtils::format("#define SHADOW\n#define DEPTH_TEXT_COUNT %i\n", _hM->getShadowCameras().size());
 
 	if (_hM->_prop._lod_data.at(_lod_num - 1).text_lod_dist_to)
 		def += "#define TEXT_LOD\n";
@@ -934,20 +927,29 @@ void LodHM::createShader()
 	auto loc_layer_num = _layer_draw.at(0)._programState->getUniformLocation("u_layer_num");
 	_layer_draw.at(0)._programState->setUniform(loc_layer_num, &lay_num, sizeof(lay_num));
 
-	if (_is_shadow)
+	if (_shdw_data.enable)
 	{
 		_allLodLoc._depth_loc = _layer_draw.at(0)._programState->getUniformLocation("u_text_sh");
 		_allLodLoc._lVP_shadow_loc = _layer_draw.at(0)._programState->getUniformLocation("u_lVP_sh");
-	
+
 		const auto& cameras = _hM->getShadowCameras();
 		std::vector<Vec2> texel_size;
-		auto loc = _layer_draw.at(0)._programState->getUniformLocation("u_texelSize_sh");
+		auto texel_size_loc = _layer_draw.at(0)._programState->getUniformLocation("u_texelSize_sh");
 		for (int j = 0; j < cameras.size(); ++j)
 		{
 			Size sz = cameras[j]->getRenderText()->getDepthText()->getContentSizeInPixels();
 			texel_size.push_back(Vec2(sz.width, sz.height));
 		}
-		_layer_draw.at(0)._programState->setUniform(loc, texel_size.data(), sizeof(Vec2) * texel_size.size());
+		_layer_draw.at(0)._programState->setUniform(texel_size_loc, texel_size.data(), sizeof(Vec2) * texel_size.size());
+		
+		auto lght_thr_loc = _layer_draw.at(0)._programState->getUniformLocation("u_light_thr_sh");
+		_layer_draw.at(0)._programState->setUniform(lght_thr_loc, &_hM->_prop._shadow_lght_thr, sizeof(float));
+	
+		auto smooth_rate_loc = _layer_draw.at(0)._programState->getUniformLocation("u_smooth_rate_sh");
+		_layer_draw.at(0)._programState->setUniform(smooth_rate_loc, &_hM->_prop._lod_data.at(_lod_num - 1).shadow.smooth_rate, sizeof(float));
+	
+		auto fade_dist_loc = _layer_draw.at(0)._programState->getUniformLocation("u_shadow_fade_dist");
+		_layer_draw.at(0)._programState->setUniform(fade_dist_loc, &_hM->_prop._shadow_fade_dist, sizeof(float));
 	}
 
 	// Set uniform for layer draw distance
@@ -1163,22 +1165,9 @@ void LodHM::createShadowShader()
 
 	if (_lod_num > 1)
 	{
-		_allLodLocShadow._cam_pos_loc = _programStateShadow->getUniformLocation("u_camPos");
-
 		_allLodLocShadow._ndraw = _programStateShadow->getUniformLocation("u_Ndraw");
 		Vec4 n_draw = Vec4::ZERO;
 		_programStateShadow->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
-
-		auto radiusLodLoc = _programStateShadow->getUniformLocation("u_lod_radius");
-		Vec3 radius_lod;
-		// Works only for _lod_init == -1 and _lod_rank == 1, 
-		// when _hM->_prop._scale.x == _hM->_prop._scale.z and
-		// _hM->_prop._width == _hM->_prop._height
-		float prev_mult = _hM->_prop._scale.x * std::pow(2, _lod_num - 2);
-		radius_lod.x = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_FROM_RATE;
-		radius_lod.z = (_hM->_prop._lod_data.at(_lod_num - 2).width / 2) * prev_mult - prev_mult * LOD_ALPHA_TO_RATE;
-		radius_lod.y = (_lod_num - 1) * 0.01f;
-		_programStateShadow->setUniform(radiusLodLoc, &radius_lod, sizeof(radius_lod));
 	}
 }
 
@@ -1231,7 +1220,7 @@ void LodHM::setTextures()
 			_layer_draw.at(i)._programState->setTextureArray(_allLodLoc._norm_loc, slots, txt);
 		}
 
-		if (_is_shadow)
+		if (_shdw_data.enable)
 		{
 			int text_slot = LAYER_TEXTURE_SIZE + LAYER_TEXTURE_SIZE * _hM->_prop._is_normal_map;
 			slots.clear();

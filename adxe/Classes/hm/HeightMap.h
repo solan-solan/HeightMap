@@ -100,6 +100,8 @@ namespace hm
 			float _load_scale = 0.f;      // Distance between sibling vertex while loading 
 			bool _is_normal_map = false;  // Is normal map shuld be represented in the shader
 			float _darker_dist = 0.f;     // Distance where ground became darker
+			float _shadow_lght_thr = 0.f; // Lightness threshold when shadow is enabled [0.0 .. 1.0]
+			float _shadow_fade_dist = 0.f; // Shadow fade distance
 
 			unsigned int _width = 1025;
 			unsigned int _height = 1025;
@@ -121,7 +123,12 @@ namespace hm
 				int height = 0;
 				float text_lod_dist_from = 0.f;
 				float text_lod_dist_to = 0.f;
-				bool is_shadow = false;
+				struct SHADOW
+				{
+					bool enable = false;
+					bool self = false;
+					float smooth_rate = 0.f; // [0.0, 1.0, 2.0 ...]
+				} shadow;
 			};
 			std::vector<LOD_DATA> _lod_data;
 
@@ -206,7 +213,13 @@ namespace hm
 			float _time_passed = 0.f;
 
 			// Is shadow rendering
-			bool _is_shadow = false;
+			struct SHADOW_GRASS
+			{
+				bool enable = false;
+				float smooth_rate = 0.f; // [0.0, 1.0, 2.0 ...]
+				float lght_thr = 0.f; // [0.0 - 1.0] 0.0 - the shadow is whole black
+				float fade_dist = 0.f;
+			} _shadow;
 		} _grass_prop;
 
 		struct GRASS_GL
@@ -476,6 +489,9 @@ namespace hm
 
 		// draw object
 		virtual void draw(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags) override;
+		void draw_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags);
+		// Draw grass
+		void drawGrass(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags);
 
 		// Create HeightMap from Active LEVEL
 		static HeightMap* create(const std::string& prop_file, const std::vector<ShadowCamera*>& shdw_cams);
@@ -562,6 +578,12 @@ namespace hm
 			return _prop;
 		}
 
+		// Get grass property
+		const GRASS_PROPERTY& getGrassProperty() const
+		{
+			return _grass_prop;
+		}
+
 		// Set grass texture
 		void setGrassText(const std::string& grass_text);
 
@@ -586,9 +608,6 @@ namespace hm
 
 		// Update grass GL buffer
 		void updateGrassGLbuffer();
-
-		// Draw grass
-		void drawGrass(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags);
 
 		// Create Lod levels
 		void CreateLodLevels();

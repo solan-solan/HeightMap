@@ -66,7 +66,6 @@ namespace hm
 		struct ALL_LOD_LOC_SHADOW
 		{
 			cocos2d::backend::UniformLocation _vp;
-			cocos2d::backend::UniformLocation _cam_pos_loc;
 			cocos2d::backend::UniformLocation _scale;
 			cocos2d::backend::UniformLocation _ndraw;
 		} _allLodLocShadow;
@@ -124,9 +123,11 @@ namespace hm
 		// Lod number
 		unsigned int _lod_num = 0;
 
-		// Is shadow
-		bool _is_shadow = false;
-		bool _is_self_shadow = false;
+		struct SHADOW_DATA
+		{
+			bool enable = false;
+			bool self = false;
+		} _shdw_data;
 
 		// Landscape vertex massive
 		std::vector<ONEVERTEX> lVert;

@@ -13,7 +13,8 @@ attribute float a_vertex_z;
 #endif
 
 #ifdef SHADOW
-    uniform mat4 u_lVP_sh;
+    uniform mat4 u_lVP_sh[DEPTH_TEXT_COUNT];
+    uniform float u_shadow_fade_dist;
 #endif
 
 uniform vec3 u_camPos;
@@ -44,7 +45,8 @@ uniform float u_darker_dist;
 
 #ifdef GL_ES
     #ifdef SHADOW
-        varying mediump vec4 v_smcoord;
+        varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
+        varying mediump float v_shadow_fade_dist;
     #endif
 	varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
@@ -71,7 +73,8 @@ uniform float u_darker_dist;
     #endif
 #else
     #ifdef SHADOW
-        varying vec4 v_smcoord;
+        varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
+        varying float v_shadow_fade_dist;
     #endif
 	varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
     #ifndef FIRST_LOD
@@ -195,10 +198,11 @@ void main()
 #endif
 
 #ifdef SHADOW
-    v_smcoord = u_lVP_sh * vec4(pos, 1.0);
-    #ifndef FIRST_LOD
-        v_smcoord.z -= u_lod_radius.y;
-    #endif
+    for (int i = 0; i < DEPTH_TEXT_COUNT; ++i)
+        v_smcoord[i] = u_lVP_sh[i] * vec4(pos, 1.0);
+
+    v_shadow_fade_dist = abs(pp.z) / u_shadow_fade_dist;
+    v_shadow_fade_dist = clamp(v_shadow_fade_dist, 0.0, 1.0);
 #endif
 
 	gl_Position = pp;

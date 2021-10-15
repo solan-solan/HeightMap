@@ -93,7 +93,11 @@ void HeightMap::loadProps()
 		_grass_prop._speed = RJH::getFloat(grass_obj, "speed", 0.f);
 		_grass_prop._size_min = RJH::getFloat(grass_obj, "size_min", 1.f);
 		_grass_prop._size_max = RJH::getFloat(grass_obj, "size_max", 1.f);
-		_grass_prop._is_shadow = RJH::getBool(grass_obj, "is_shadow") && _shdw.size();
+		auto shadow_obj = RJH::getObject(grass_obj->value, "shadow");
+		_grass_prop._shadow.enable = RJH::getBool(shadow_obj, "enable") && _shdw.size();
+		_grass_prop._shadow.smooth_rate = RJH::getFloat(shadow_obj, "smooth_rate", 0.f);
+		_grass_prop._shadow.lght_thr = RJH::getFloat(shadow_obj, "light_threshold", 0.f);
+		_grass_prop._shadow.fade_dist = RJH::getFloat(shadow_obj, "fade_dist", 0.f);
 	}
 	_prop._chunk_count_h = RJH::getInt(height_data_obj, "lod_chunk_count_w_h");
 	_prop._chunk_count_w = _prop._chunk_count_h;
@@ -131,6 +135,8 @@ void HeightMap::loadProps()
 	_prop._scale = Vec3(RJH::getFloat(height_data_obj, "lod_scale_x_z"), RJH::getFloat(height_data_obj, "lod_scale_y"), RJH::getFloat(height_data_obj, "lod_scale_x_z"));
 	_prop._is_normal_map = RJH::getBool(height_data_obj, "normal_map_en");
 	_prop._darker_dist = RJH::getFloat(height_data_obj, "darker_dist", 0.f);
+	_prop._shadow_lght_thr = RJH::getFloat(height_data_obj, "shadow_light_threshold", 0.f);
+	_prop._shadow_fade_dist = RJH::getFloat(height_data_obj, "shadow_fade_dist", 0.f);
 
 	// Set load data
 	auto lod_data_arr = RJH::getArray(height_data_obj->value, "lod_data");
@@ -141,8 +147,10 @@ void HeightMap::loadProps()
 		data.height = data.width;
 		data.text_lod_dist_from = RJH::getFloat(ld_it, "text_lod_dist_from");
 		data.text_lod_dist_to = RJH::getFloat(ld_it, "text_lod_dist_to");
-		data.is_shadow = RJH::getBool(ld_it, "is_shadow") && _shdw.size();
-		data.is_self_shadow = RJH::getBool(ld_it, "is_self_shadow") && _shdw.size();
+		auto shdw_obj = RJH::getObject(ld_it, "shadow");
+		data.shadow.enable = RJH::getBool(shdw_obj, "enable") && _shdw.size();
+		data.shadow.self = RJH::getBool(shdw_obj, "self") && _shdw.size();
+		data.shadow.smooth_rate = RJH::getFloat(shdw_obj, "smooth_rate");
 		_prop._lod_data.push_back(data);
 	}
 	_prop._lod_count = _prop._lod_data.size();
@@ -552,8 +560,8 @@ void HeightMap::createGrassShader()
 	std::string fr_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/grass_bb.frag");
 	
 	std::string def;
-	if (_grass_prop._is_shadow)
-		def += "#define SHADOW\n";
+	if (_grass_prop._shadow.enable)
+		def += StringUtils::format("#define SHADOW\n#define DEPTH_TEXT_COUNT %i\n", _shdw.size());
 
 	auto program = backend::Device::getInstance()->newProgram(def + vert_sh, def + fr_sh);
 	_programState = new backend::ProgramState(program);
@@ -589,7 +597,7 @@ void HeightMap::createGrassShader()
 	_grass_gl._vpLoc = _programState->getUniformLocation("u_VPMatrix");
 	_grass_gl._camPosLoc = _programState->getUniformLocation("u_cam_pos");
 
-	if (_grass_prop._is_shadow)
+	if (_grass_prop._shadow.enable)
 	{
 		_grass_gl._lVP_shadow_loc = _programState->getUniformLocation("u_lVP_sh");
 
@@ -610,6 +618,15 @@ void HeightMap::createGrassShader()
 		}
 		_programState->setUniform(texels_loc, texel_size.data(), sizeof(Vec2) * texel_size.size());
 		_programState->setTextureArray(depth_loc, slots, txt);
+
+		auto lght_thr_loc = _programState->getUniformLocation("u_light_thr_sh");
+		_programState->setUniform(lght_thr_loc, &_grass_prop._shadow.lght_thr, sizeof(float));
+
+		auto smooth_rate_loc = _programState->getUniformLocation("u_smooth_rate_sh");
+		_programState->setUniform(smooth_rate_loc, &_grass_prop._shadow.smooth_rate, sizeof(float));
+
+		auto fade_dist_loc = _programState->getUniformLocation("u_shadow_fade_dist");
+		_programState->setUniform(fade_dist_loc, &_grass_prop._shadow.fade_dist, sizeof(float));
 	}
 
 	// Set grass speed uniform
@@ -722,28 +739,27 @@ void HeightMap::drawGrass(cocos2d::Renderer* renderer, const cocos2d::Mat4& tran
 	_programState->setUniform(_grass_gl._light_dirColLoc, &_prop._light.colAtmLight, sizeof(_prop._light.colAtmLight));
 	_programState->setUniform(_grass_gl._light_ambColLoc, &_prop._light.ambAtmLight, sizeof(_prop._light.ambAtmLight));
 
-	auto camera = Camera::getVisitingCamera();
-
 	// Set right and up direction of the camera
 	Vec3 dir;
-	camera->getNodeToWorldTransform().getUpVector(&dir);
+	auto cam = Camera::getVisitingCamera();
+	cam->getNodeToWorldTransform().getUpVector(&dir);
 	_programState->setUniform(_grass_gl._upLoc, &dir, sizeof(dir));
 	
-	camera->getNodeToWorldTransform().getRightVector(&dir);
+	cam->getNodeToWorldTransform().getRightVector(&dir);
 	_programState->setUniform(_grass_gl._rightLoc, &dir, sizeof(dir));
 
 	// Set VP
-	const Mat4& view_proj_mat = camera->getViewProjectionMatrix();
+	const Mat4& view_proj_mat = cam->getViewProjectionMatrix();
 	_programState->setUniform(_grass_gl._vpLoc, view_proj_mat.m, sizeof(view_proj_mat.m));
 
 	//Set time
 	_programState->setUniform(_grass_gl._timeLoc, &_grass_prop._time_passed, sizeof(_grass_prop._time_passed));
 
     // Set camera position
-	Vec3 camPos = Camera::getVisitingCamera()->getPosition3D();
+	Vec3 camPos = cam->getPosition3D();
 	_programState->setUniform(_grass_gl._camPosLoc, &camPos, sizeof(camPos));
 
-	if (_grass_prop._is_shadow)
+	if (_grass_prop._shadow.enable)
 	{
 
 		static const cocos2d::Mat4 bias(
