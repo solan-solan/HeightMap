@@ -224,7 +224,15 @@ namespace hm
 
 		struct GRASS_GL
 		{
-			cocos2d::CustomCommand _customCommand;
+			struct DRAW_DATA
+			{
+				int idx_s_v = 0;
+				int idx_e_v = 0;
+				int idx_s_i = 0;
+				int idx_e_i = 0;
+				cocos2d::CustomCommand _customCommand;
+			};
+			std::vector<DRAW_DATA> _dd;
 
 			cocos2d::backend::UniformLocation _upLoc;
 			cocos2d::backend::UniformLocation _rightLoc;

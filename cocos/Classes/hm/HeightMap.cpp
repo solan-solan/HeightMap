@@ -8,6 +8,8 @@ using namespace hm;
 using namespace cocos2d;
 
 #define NORMAL_SLOPE 4
+#define GRASS_INDEX_PER_MODEL 6
+#define GRASS_VERTEX_PER_MODEL 4
 
 namespace hm
 {
@@ -566,8 +568,12 @@ void HeightMap::createGrassShader()
 	auto program = backend::Device::getInstance()->newProgram(def + vert_sh, def + fr_sh);
 	_programState = new backend::ProgramState(program);
 
-	auto& pipelineDescriptor = _grass_gl._customCommand.getPipelineDescriptor();
-	pipelineDescriptor.programState = _programState;
+	for (int i = 0; i < _grass_gl._dd.size(); ++i)
+	{
+		auto& pipelineDescriptor = _grass_gl._dd.at(i)._customCommand.getPipelineDescriptor();
+		pipelineDescriptor.programState = _programState;
+	}
+
 	auto layout = _programState->getVertexLayout();
 
 	const auto& attributeInfo = _programState->getProgram()->getActiveAttributes();
@@ -659,41 +665,77 @@ void HeightMap::createGrassBuffers()
     if (gr_count > _fLod->_w * _fLod->_h)
 	    gr_count = _fLod->_w * _fLod->_h;
 	_gVert.resize(gr_count * _grass_prop._rate);
-	assert(_gVert.size() * 4 < 0xffff); // Since the _gInd type is CustomCommand::IndexFormat::U_SHORT (Otherwise do it as CustomCommand::IndexFormat::U_INT + the inner type of _gInd as 'int')
+//	assert(_gVert.size() * 4 < 0xffff); // Since the _gInd type is CustomCommand::IndexFormat::U_SHORT (Otherwise do it as CustomCommand::IndexFormat::U_INT + the inner type of _gInd as 'int')
+
+	// Add first draw data
+	_grass_gl._dd.emplace_back();
+	int num_draw = 0;
 
 	// Index array
-	for (int i = 0, j = 0; i < _gVert.size() * 4; i += 4, ++j)
+	int v_from = 0;
+	int i_from = 0;
+	int i, j;
+	for (i = 0, j = 0; i < _gVert.size() * GRASS_VERTEX_PER_MODEL; i += GRASS_VERTEX_PER_MODEL, ++j)
 	{
+		if ((i + (GRASS_VERTEX_PER_MODEL - 1) - v_from) >= 0xffff)
+		{
+			_grass_gl._dd.at(num_draw).idx_s_v = v_from;
+			_grass_gl._dd.at(num_draw).idx_e_v = i - 1;
+			v_from = i;
+
+			_grass_gl._dd.at(num_draw).idx_s_i = i_from;
+			_grass_gl._dd.at(num_draw).idx_e_i = _gInd.size() - 1;
+			i_from = _gInd.size();
+
+			// Add next draw data
+			_grass_gl._dd.emplace_back();
+			num_draw++;
+		}
+
 		// First tris
-		_gInd.push_back(i);
-		_gInd.push_back(i + 3);
-		_gInd.push_back(i + 1);
+		_gInd.push_back(i - v_from);
+		_gInd.push_back(i + 3 - v_from);
+		_gInd.push_back(i + 1 - v_from);
 		// Second tris
-		_gInd.push_back(i + 3);
-		_gInd.push_back(i + 2);
-		_gInd.push_back(i + 1);
+		_gInd.push_back(i + 3 - v_from);
+		_gInd.push_back(i + 2 - v_from);
+		_gInd.push_back(i + 1 - v_from);
 	}
-	int last = _gInd.at(_gInd.size() - 1);
 
-	_grass_gl._customCommand.createVertexBuffer(sizeof(GRASS_MODEL), _gVert.size(), CustomCommand::BufferUsage::DYNAMIC);
-	_grass_gl._customCommand.createIndexBuffer(CustomCommand::IndexFormat::U_SHORT, _gInd.size(), CustomCommand::BufferUsage::STATIC);
+	_grass_gl._dd.at(num_draw).idx_s_v = v_from;
+	_grass_gl._dd.at(num_draw).idx_e_v = i - 1;
+	_grass_gl._dd.at(num_draw).idx_s_i = i_from;
+	_grass_gl._dd.at(num_draw).idx_e_i = _gInd.size() - 1;
 
-	_grass_gl._customCommand.updateVertexBuffer(_gVert.data(), _gVert.size() * sizeof(GRASS_MODEL));
-	_grass_gl._customCommand.updateIndexBuffer(_gInd.data(), _gInd.size() * sizeof(unsigned short));
+	for (int k = 0; k < _grass_gl._dd.size(); ++k)
+	{
+		int sz_v = _grass_gl._dd.at(k).idx_e_v - _grass_gl._dd.at(k).idx_s_v + 1;
+		int sz = sz_v / GRASS_VERTEX_PER_MODEL;
+		int delta_v = _grass_gl._dd.at(k).idx_s_v;
+		int delta = delta_v / GRASS_VERTEX_PER_MODEL;
+		int sz_i = _grass_gl._dd.at(k).idx_e_i - _grass_gl._dd.at(k).idx_s_i + 1;
+		int delta_i = _grass_gl._dd.at(k).idx_s_i;
 
-	_grass_gl._customCommand.setTransparent(true);
-	_grass_gl._customCommand.set3D(true);
+		_grass_gl._dd.at(k)._customCommand.createVertexBuffer(sizeof(GRASS_MODEL), sz/*_gVert.size()*/, CustomCommand::BufferUsage::DYNAMIC);
+		_grass_gl._dd.at(k)._customCommand.createIndexBuffer(CustomCommand::IndexFormat::U_SHORT, sz_i/*_gInd.size()*/, CustomCommand::BufferUsage::STATIC);
 
-	_grass_gl._customCommand.setBeforeCallback(CC_CALLBACK_0(HeightMap::onBeforeDraw, this));
-	_grass_gl._customCommand.setAfterCallback(CC_CALLBACK_0(HeightMap::onAfterDraw, this));
+		_grass_gl._dd.at(k)._customCommand.updateVertexBuffer(_gVert.data() + delta, /*_gVert.size()*//*sz_v*/sz * sizeof(GRASS_MODEL));
+		_grass_gl._dd.at(k)._customCommand.updateIndexBuffer(_gInd.data() + delta_i, /*_gInd.size()*/sz_i * sizeof(unsigned short));
 
-	// Set blending
-	auto& blend = _grass_gl._customCommand.getPipelineDescriptor().blendDescriptor;
-	blend.blendEnabled = true;
-	blend.sourceRGBBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
-	blend.destinationRGBBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
-	blend.sourceAlphaBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
-	blend.destinationAlphaBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+		_grass_gl._dd.at(k)._customCommand.setTransparent(true);
+		_grass_gl._dd.at(k)._customCommand.set3D(true);
+
+		_grass_gl._dd.at(k)._customCommand.setBeforeCallback(CC_CALLBACK_0(HeightMap::onBeforeDraw, this));
+		_grass_gl._dd.at(k)._customCommand.setAfterCallback(CC_CALLBACK_0(HeightMap::onAfterDraw, this));
+
+		// Set blending
+		auto& blend = _grass_gl._dd.at(k)._customCommand.getPipelineDescriptor().blendDescriptor;
+		blend.blendEnabled = true;
+		blend.sourceRGBBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
+		blend.destinationRGBBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+		blend.sourceAlphaBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
+		blend.destinationAlphaBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+	}
 }
 
 void HeightMap::setGrassText(const std::string& grass_text)
@@ -728,9 +770,18 @@ void HeightMap::setGrassText(const std::string& grass_text)
 
 void HeightMap::drawGrass(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags)
 {
-	_grass_gl._customCommand.init(0);
-	_grass_gl._customCommand.setIndexDrawInfo(0, _grass_gl._draw_mdl_cnt * 6);
-	renderer->addCommand(&_grass_gl._customCommand);
+	for (int i = 0; i < _grass_gl._dd.size(); ++i)
+	{
+		_grass_gl._dd.at(i)._customCommand.init(0);
+//		_grass_gl._dd.at(i)._customCommand.setIndexDrawInfo(0, _grass_gl._draw_mdl_cnt * 6);
+		int draw_i = _grass_gl._draw_mdl_cnt * GRASS_INDEX_PER_MODEL - _grass_gl._dd.at(i).idx_s_i;
+		int sz_i = std::min(_grass_gl._dd.at(i).idx_e_i - _grass_gl._dd.at(i).idx_s_i + 1, draw_i);
+		if (sz_i > 0)
+		{
+			_grass_gl._dd.at(i)._customCommand.setIndexDrawInfo(0, sz_i);
+			renderer->addCommand(&_grass_gl._dd.at(i)._customCommand);
+		}
+	}
 
 	// Set atmosphere light direction
 	_programState->setUniform(_grass_gl._light_dirLoc, &_prop._light.dirAtmLight, sizeof(_prop._light.dirAtmLight));
@@ -785,8 +836,8 @@ void HeightMap::enableGrass()
 	if (_programState)
 		return; // The grass is rendering already
 	// Create grass gl buffers and shader only for the first layer
-	createGrassShader();
 	createGrassBuffers();
+	createGrassShader();
 }
 
 void HeightMap::disableGrass()
@@ -806,13 +857,27 @@ void HeightMap::disableGrass()
 
 		_gVert.clear();
 		_gInd.clear();
+		_grass_gl._dd.clear();
 	}
 }
 
 void HeightMap::updateGrassGLbuffer()
 {
 	_grass_gl._draw_mdl_cnt = _grass_gl._mdl_cnt;
-	_grass_gl._customCommand.updateVertexBuffer(_gVert.data(), 0, sizeof(GRASS_MODEL) * _grass_gl._draw_mdl_cnt);
+//	_grass_gl._dd.at(0)._customCommand.updateVertexBuffer(_gVert.data(), 0, sizeof(GRASS_MODEL) * _grass_gl._draw_mdl_cnt);
+	for (int i = 0; i < _grass_gl._dd.size(); ++i)
+	{
+		int delta_v = _grass_gl._dd.at(i).idx_s_v;
+		int delta = delta_v / GRASS_VERTEX_PER_MODEL;
+		int sz_v = _grass_gl._dd.at(i).idx_e_v - delta_v + 1;
+		int size = sz_v / GRASS_VERTEX_PER_MODEL;
+//		_grass_gl._dd.at(i)._customCommand.updateVertexBuffer(_gVert.data() + delta, 0, size * sizeof(GRASS_MODEL)/*_grass_gl._draw_mdl_cnt*/);
+	
+		int draw_v = _grass_gl._draw_mdl_cnt - (_grass_gl._dd.at(i).idx_s_v / GRASS_VERTEX_PER_MODEL);
+		int sz_draw = std::min(size, draw_v);
+		if (sz_draw > 0)
+			_grass_gl._dd.at(i)._customCommand.updateVertexBuffer(_gVert.data() + delta, 0, sz_draw * sizeof(GRASS_MODEL));
+	}
 }
 
 const OneChunk::ONE_HEIGHT& HeightMap::getTileData(float x_w, float z_w, std::pair<unsigned short, unsigned short>& _loc_idx)
