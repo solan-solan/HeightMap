@@ -77,7 +77,11 @@
                     "first_lod_size": 1.0,
                     "scale_size_coef": 8.0,
                     "normal_map_scale": 4.0,
-                    "specular_factor": 0.0
+                    "specular_factor": 0.0,
+                    "grass": {
+                        "diffuse": "res/hm/grass/test_grass_1.png",
+                        "rate": 10
+                    }
                 },
                 "text_r": {
                     "diffuse":"res/hm/layer_0/snow.jpg",
@@ -112,7 +116,11 @@
                     "first_lod_size": 0.5,
                     "scale_size_coef": 0.0,
                     "normal_map_scale": 4.0,
-                    "specular_factor": 0.0
+                    "specular_factor": 0.0,
+                    "grass": {
+                        "diffuse": "res/hm/grass/test_grass.png",
+                        "rate": 120
+                    }
                 },
                 "text_r": {
                     "diffuse":"res/hm/layer_1/cliff1.jpg",
@@ -133,8 +141,7 @@
         "shadow_light_threshold": 0.5,
         "shadow_fade_dist": 200.0,
         "grass": {
-            "rate": 36,
-            "tile_count_coef": 10, 
+            "tile_count_coef": 20, 
             "shift": 0.5,
             "speed": 0.02,
             "size_min": 0.05,

@@ -1,6 +1,7 @@
 attribute vec4 a_position;
 attribute vec2 a_color;
 attribute vec2 a_texCoord;
+attribute float a_texIdx;
 
 uniform vec3  u_up;
 uniform vec3  u_right;
@@ -28,6 +29,7 @@ uniform vec2 u_dist_alpha;
     varying mediump vec2 v_texCoord;
     varying mediump vec3 v_normal;
     varying mediump float v_dist_alpha;
+    varying mediump float v_texIdx;
 #else
     #ifdef SHADOW
         varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
@@ -36,6 +38,7 @@ uniform vec2 u_dist_alpha;
     varying vec2 v_texCoord;
     varying vec3 v_normal;
     varying float v_dist_alpha;
+    varying float v_texIdx;
 #endif
 
 float local_rand(float seed, float max_val) // RAND_MAX assumed to be 'max_val'
@@ -46,6 +49,7 @@ float local_rand(float seed, float max_val) // RAND_MAX assumed to be 'max_val'
 
 void main()
 {
+    v_texIdx = a_texIdx;
     float x = a_position.x;
     float z = a_position.z;
 

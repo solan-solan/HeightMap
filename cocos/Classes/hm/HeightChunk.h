@@ -14,7 +14,7 @@ namespace hm
 #define ONE_HEIGHT_DEF_X 128
 #define ONE_HEIGHT_DEF_Y 255
 #define ONE_HEIGHT_DEF_Z 128
-#define ONE_HEIGHT_DEF_ALPHA 0xff000000
+#define ONE_HEIGHT_DEF_ALPHA 0x000000ff
 #define ONE_HEIGHT_DEF_H -255
 
 	class OneChunk

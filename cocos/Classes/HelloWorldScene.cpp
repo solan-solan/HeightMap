@@ -467,7 +467,6 @@ void HelloWorld::enableGrass(cocos2d::Ref* sender, cocos2d::ui::CheckBox::EventT
     {
     case ui::CheckBox::EventType::SELECTED:
         _height_map->enableGrass();
-        _height_map->setGrassText("res/hm/grass/test_grass.png");
         _height_map->forceUpdateHeightMap(_height_map->getProperty()._lod_count);
         break;
 

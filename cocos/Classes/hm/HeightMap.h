@@ -60,13 +60,14 @@ namespace hm
 		{
 			struct TEXTURE_DATA
 			{
-				cocos2d::Texture2D* diff;
-				cocos2d::Texture2D* norm;
+				cocos2d::Texture2D* diff = nullptr;
+				cocos2d::Texture2D* norm = nullptr;
+				cocos2d::Texture2D* grass = nullptr;
 			} _text[LAYER_TEXTURE_SIZE];
 		} _layerData[MAX_LAYER_COUNT];
 
 		// Grass texture
-		cocos2d::Texture2D* _grassText = nullptr;
+		//cocos2d::Texture2D* _grassText = nullptr;
 
 		// One grass bush model
 		struct GRASS_MODEL
@@ -80,6 +81,7 @@ namespace hm
 				float ratey = 0;
 				float tx = 0;
 				float ty = 0;
+				float text_idx = 0;
 			} vert[4];
 			GRASS_MODEL()
 			{
@@ -149,6 +151,12 @@ namespace hm
 					float scale_size_coef = 0.f;
 					float normal_map_scale = 0.f;
 					float specular_factor = 0.f;
+					struct GRASS_TEXT
+					{
+						std::string diffuse; // Grass texture for the certain texture
+						unsigned int rate = 0; // Grass rate for the tile with the certain texture
+						unsigned int idx = 0; // Idx of the texture in the gl array
+					} grass;
 				};
 				std::array<TEXTURE, LAYER_TEXTURE_SIZE> _text;
 				float _dist = 0.f;
@@ -185,8 +193,11 @@ namespace hm
 
 		struct GRASS_PROPERTY
 		{
-			// The rate of the grass in one tile (the count of GRASS_MODEL in one tile)
-			unsigned short _rate = 1;
+			// The max rate of the grass in one tile (the count of GRASS_MODEL in one tile)
+			unsigned short _max_rate = 0;
+
+			// Texture grass count
+			unsigned short _text_count = 0;
 
 			// Coefficient to calculate count of tiles where grass to be grown depend on the first lod center
 			unsigned short _tile_count_coef = 0;
@@ -592,8 +603,8 @@ namespace hm
 			return _grass_prop;
 		}
 
-		// Set grass texture
-		void setGrassText(const std::string& grass_text);
+		// load grass texture
+		void loadGrassText();
 
 		// Get shadow cameras
 		const std::vector<ShadowCamera*>& getShadowCameras() const

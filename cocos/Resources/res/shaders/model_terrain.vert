@@ -148,17 +148,17 @@ void main()
     float alpha = a_alpha[int(u_layer_num)];
 #endif
 
-    v_alpha[0] = (alpha / 16777216.0) / 255.0;
+    v_alpha[0] = mod(alpha, 256.0) / 255.0;
 #if LAYER_TEXTURE_SIZE > 1
-    v_alpha[1] = alpha / 65536.0;
+    v_alpha[1] = alpha / 256.0;
     v_alpha[1] = mod(v_alpha[1], 256.0) / 255.0;
 #endif
 #if LAYER_TEXTURE_SIZE > 2
-    v_alpha[2] = alpha / 256.0;
+    v_alpha[2] = alpha / 65536.0;
     v_alpha[2] = mod(v_alpha[2], 256.0) / 255.0;
 #endif
 #if LAYER_TEXTURE_SIZE == 4
-    v_alpha[3] = mod(alpha, 256.0) / 255.0;
+    v_alpha[3] = (alpha / 16777216.0) / 255.0;
 #endif
 
     float xn = a_npack / 65536.0 - 128.0;

@@ -420,41 +420,62 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 			// Adjust grass center
 			if (_hM->_programState && !_next)
 			{
-				float x_grass_coeff = std::abs(center_x_grass - xp) / _hM->_prop._scale.x;
-				float z_grass_coeff = std::abs(center_z_grass - zp) / _hM->_prop._scale.z;
-				if (x_grass_coeff <= _hM->_grass_prop._tile_count_coef && z_grass_coeff <= _hM->_grass_prop._tile_count_coef)
+				int lay_num = 0, text_num = -1;
+				for (int q = _layer_count - 1; q >= 0; --q)
 				{
-					std::srand((i + 1) * (i + 1) * (j + 1) * (j + 1));
-					for (int l = 0; l < _hM->_grass_prop._rate; ++l)
-					{
-						unsigned int idx = grass_mdl_cnt * _hM->_grass_prop._rate + l;
-
-						float rnd = rand_minus1_1();
-						float xr = _hM->_grass_prop._shift * rnd;
-						if (i == 0)
-							xr = rnd * 0.5;
-						if (i == _hM->_prop._width - 1.0)
-							xr = rnd * 0.5 * -1.0;
-
-						rnd = rand_minus1_1();
-						float yr = _hM->_grass_prop._shift * rnd;
-						if (i == 0)
-							yr = rnd * 0.5;
-						if (i == _hM->_prop._height - 1.0)
-							yr = rnd * 0.5 * -1.0;
-
-						float x_sh = xp + xr;
-						float z_sh = zp + yr;
-						Vec3 n;
-						float y = _hM->getHeight(x_sh, z_sh, &n) / _hM->_prop._scale.y;
-						_hM->_gVert[idx].vert[0].i = xp; _hM->_gVert[idx].vert[0].j = zp; _hM->_gVert[idx].vert[0].y = y; _hM->_gVert[idx].vert[0].ratex = xr; _hM->_gVert[idx].vert[0].ratey = yr;
-						_hM->_gVert[idx].vert[1].i = xp; _hM->_gVert[idx].vert[1].j = zp; _hM->_gVert[idx].vert[1].y = y; _hM->_gVert[idx].vert[1].ratex = xr; _hM->_gVert[idx].vert[1].ratey = yr;
-						_hM->_gVert[idx].vert[2].i = xp; _hM->_gVert[idx].vert[2].j = zp; _hM->_gVert[idx].vert[2].y = y; _hM->_gVert[idx].vert[2].ratex = xr; _hM->_gVert[idx].vert[2].ratey = yr;
-						_hM->_gVert[idx].vert[3].i = xp; _hM->_gVert[idx].vert[3].j = zp; _hM->_gVert[idx].vert[3].y = y; _hM->_gVert[idx].vert[3].ratex = xr; _hM->_gVert[idx].vert[3].ratey = yr;
-					}
-					grass_mdl_cnt++;
-					_hM->_grass_gl._mdl_cnt = grass_mdl_cnt * _hM->_grass_prop._rate;
+					lay_num = q;
+					unsigned char* alpha = (unsigned char*)(&(one.lay[q].alpha));
+					for (int f = LAYER_TEXTURE_SIZE - 1; f >= 0; --f)
+						if (alpha[f] == 0xff)
+						{
+							text_num = f;
+							q = -1;
+							break;
+						}
 				}
+
+				// If grass exists for the texture
+				if (text_num > -1 && _hM->_prop._layers.at(lay_num)._text.at(text_num).grass.rate)
+				{
+					float x_grass_coeff = std::abs(center_x_grass - xp) / _hM->_prop._scale.x;
+					float z_grass_coeff = std::abs(center_z_grass - zp) / _hM->_prop._scale.z;
+					if (x_grass_coeff <= _hM->_grass_prop._tile_count_coef && z_grass_coeff <= _hM->_grass_prop._tile_count_coef)
+					{
+						auto& grass_data = _hM->_prop._layers.at(lay_num)._text.at(text_num).grass;
+						int rate = grass_data.rate;
+						int idx_text = grass_data.idx;
+						std::srand((i + 1) * (i + 1) * (j + 1) * (j + 1));
+						for (int l = 0; l < rate; ++l)
+						{
+							unsigned int idx = grass_mdl_cnt + l;
+
+							float rnd = rand_minus1_1();
+							float xr = _hM->_grass_prop._shift * rnd;
+							if (i == 0)
+								xr = rnd * 0.5;
+							if (i == _hM->_prop._width - 1.0)
+								xr = rnd * 0.5 * -1.0;
+
+							rnd = rand_minus1_1();
+							float yr = _hM->_grass_prop._shift * rnd;
+							if (i == 0)
+								yr = rnd * 0.5;
+							if (i == _hM->_prop._height - 1.0)
+								yr = rnd * 0.5 * -1.0;
+
+							float x_sh = xp + xr;
+							float z_sh = zp + yr;
+							Vec3 n;
+							float y = _hM->getHeight(x_sh, z_sh, &n) / _hM->_prop._scale.y;
+							_hM->_gVert[idx].vert[0].i = xp; _hM->_gVert[idx].vert[0].j = zp; _hM->_gVert[idx].vert[0].y = y; _hM->_gVert[idx].vert[0].ratex = xr; _hM->_gVert[idx].vert[0].ratey = yr; _hM->_gVert[idx].vert[0].text_idx = idx_text;
+							_hM->_gVert[idx].vert[1].i = xp; _hM->_gVert[idx].vert[1].j = zp; _hM->_gVert[idx].vert[1].y = y; _hM->_gVert[idx].vert[1].ratex = xr; _hM->_gVert[idx].vert[1].ratey = yr; _hM->_gVert[idx].vert[1].text_idx = idx_text;
+							_hM->_gVert[idx].vert[2].i = xp; _hM->_gVert[idx].vert[2].j = zp; _hM->_gVert[idx].vert[2].y = y; _hM->_gVert[idx].vert[2].ratex = xr; _hM->_gVert[idx].vert[2].ratey = yr; _hM->_gVert[idx].vert[2].text_idx = idx_text;
+							_hM->_gVert[idx].vert[3].i = xp; _hM->_gVert[idx].vert[3].j = zp; _hM->_gVert[idx].vert[3].y = y; _hM->_gVert[idx].vert[3].ratex = xr; _hM->_gVert[idx].vert[3].ratey = yr; _hM->_gVert[idx].vert[3].text_idx = idx_text;
+						}
+						grass_mdl_cnt += rate;
+					}
+				}
+				_hM->_grass_gl._mdl_cnt = grass_mdl_cnt;
 			}
 		}
 	}
