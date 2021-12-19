@@ -66,9 +66,6 @@ namespace hm
 			} _text[LAYER_TEXTURE_SIZE];
 		} _layerData[MAX_LAYER_COUNT];
 
-		// Grass texture
-		//cocos2d::Texture2D* _grassText = nullptr;
-
 		// One grass bush model
 		struct GRASS_MODEL
 		{
@@ -77,11 +74,13 @@ namespace hm
 				float i = 0.0;
 				float y = 0.0;
 				float j = 0.0;
-				float ratex = 0;
-				float ratey = 0;
-				float tx = 0;
-				float ty = 0;
-				float text_idx = 0;
+				float ratex = 0.0;
+				float ratey = 0.0;
+				float tx = 0.0;
+				float ty = 0.0;
+				float text_idx = 0.0;
+				float size = 0.0;
+				float patch_num = 0.0;
 			} vert[4];
 			GRASS_MODEL()
 			{
@@ -151,11 +150,18 @@ namespace hm
 					float scale_size_coef = 0.f;
 					float normal_map_scale = 0.f;
 					float specular_factor = 0.f;
-					struct GRASS_TEXT
+					struct GRASS_DATA
 					{
+						struct GRASS_PATCH
+						{
+							float size_min = 0.f;
+							float size_max = 0.f;
+							float chance = 0.f;
+						};
 						std::string diffuse; // Grass texture for the certain texture
 						unsigned int rate = 0; // Grass rate for the tile with the certain texture
 						unsigned int idx = 0; // Idx of the texture in the gl array
+						std::vector<GRASS_PATCH> patches;
 					} grass;
 				};
 				std::array<TEXTURE, LAYER_TEXTURE_SIZE> _text;
@@ -214,11 +220,11 @@ namespace hm
 			// Grass speed
 			float _speed = 0.f;
 
-			// Min grass size
-			float _size_min = 1.f;
+			// Patches count along X
+			float _patch_x_count = 0.f;
 
-			// Max gass size
-			float _size_max = 1.f;
+			// Patches count along Y
+			float _patch_y_count = 0.f;
 
 			// Time passed
 			float _time_passed = 0.f;

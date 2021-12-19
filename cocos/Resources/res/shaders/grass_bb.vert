@@ -2,6 +2,8 @@ attribute vec4 a_position;
 attribute vec2 a_color;
 attribute vec2 a_texCoord;
 attribute float a_texIdx;
+attribute float a_size;
+attribute float a_patch_num;
 
 uniform vec3  u_up;
 uniform vec3  u_right;
@@ -11,8 +13,8 @@ uniform float u_time;
 
 uniform float u_speed;
 uniform vec3  u_scale;
-uniform float u_size_min;
-uniform float u_size_max;
+uniform float u_patch_x_count;
+uniform float u_patch_y_count;
 uniform vec3 u_cam_pos;
 uniform vec2 u_dist_alpha;
 
@@ -41,12 +43,6 @@ uniform vec2 u_dist_alpha;
     varying float v_texIdx;
 #endif
 
-float local_rand(float seed, float max_val) // RAND_MAX assumed to be 'max_val'
-{
-    float val = seed * 1103515245.0 + 12345.0;
-    return mod(val / 65536.0, max_val);
-}
-
 void main()
 {
     v_texIdx = a_texIdx;
@@ -57,12 +53,16 @@ void main()
 
     vec3 up = vec3(0.0, 1.0, 0.0);
 
-    float seed = abs(a_color.x) + abs(a_color.y);
-    float add_size = local_rand(mod(seed, 65536.0), u_size_max - u_size_min + 0.0001);
-	vec4  vertex = pos + vec4 ( (a_texCoord.x - 0.5) * (u_size_min + add_size) * u_right + (1.0 - a_texCoord.y - 0.1) * (u_size_min + add_size) * up, 0.0 ) + vec4(a_color.x, 0.0, a_color.y, 0.0);
+    vec4  vertex = pos + vec4 ( (a_texCoord.x - 0.5) * a_size * u_right + (1.0 - a_texCoord.y - 0.1) * a_size * up, 0.0 ) + vec4(a_color.x, 0.0, a_color.y, 0.0);
 
-    v_texCoord = a_texCoord;
+    // Texture coords calculation
+    float scale_x_text = a_texCoord.x / u_patch_x_count;
+    float scale_y_text = a_texCoord.y / u_patch_y_count;
+    float col_num_text = mod(a_patch_num, u_patch_x_count);
+    float row_num_text = float(int(a_patch_num) / int(u_patch_x_count));
+    v_texCoord = vec2(scale_x_text + col_num_text * (1.0 / u_patch_x_count), scale_y_text + row_num_text * (1.0 / u_patch_y_count));
 
+    // Grass move calculation
     float angle1 = u_time + 0.5077 * vertex.x - 0.421 * vertex.z;
     float angle2 = 1.31415 * u_time + 0.3 * vertex.y - 0.6 * vertex.z;
 

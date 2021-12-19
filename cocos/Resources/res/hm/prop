@@ -79,8 +79,30 @@
                     "normal_map_scale": 4.0,
                     "specular_factor": 0.0,
                     "grass": {
-                        "diffuse": "res/hm/grass/test_grass_1.png",
-                        "rate": 10
+                        "diffuse": "res/hm/grass/test_grass_patch_1.png",
+                        "rate": 140,
+                        "patches": [
+                            {
+                                "size_min": 0.05,
+                                "size_max": 0.05,
+                                "chance": 0.03
+                            },
+                            {
+                                "size_min": 0.2,
+                                "size_max": 0.4,
+                                "chance": 0.05
+                            },
+                            {
+                                "size_min": 0.05,
+                                "size_max": 0.2,
+                                "chance": 0.3
+                            },
+                            {
+                                "size_min": 0.05,
+                                "size_max": 0.2,
+                                "chance": 1.0
+                            }
+                        ]
                     }
                 },
                 "text_r": {
@@ -118,8 +140,25 @@
                     "normal_map_scale": 4.0,
                     "specular_factor": 0.0,
                     "grass": {
-                        "diffuse": "res/hm/grass/test_grass.png",
-                        "rate": 120
+                        "diffuse": "res/hm/grass/test_grass_patch_2.png",
+                        "rate": 120,
+                        "patches": [
+                            {
+                                "size_min": 0.05,
+                                "size_max": 0.2,
+                                "chance": 0.1
+                            },
+                            {
+                                "size_min": 0.05,
+                                "size_max": 0.2,
+                                "chance": 0.4
+                            },
+                            {
+                                "size_min": 0.05,
+                                "size_max": 0.2,
+                                "chance": 1.0
+                            }
+                        ]
                     }
                 },
                 "text_r": {
@@ -144,8 +183,8 @@
             "tile_count_coef": 20, 
             "shift": 0.5,
             "speed": 0.02,
-            "size_min": 0.05,
-            "size_max": 0.2,
+            "patch_x_count": 2,
+            "patch_y_count": 2,
             "shadow": {
                 "enable": true,
                 "smooth_rate": 1.0,

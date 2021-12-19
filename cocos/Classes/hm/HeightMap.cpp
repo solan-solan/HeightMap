@@ -92,8 +92,8 @@ void HeightMap::loadProps()
 		_grass_prop._tile_count_coef = RJH::getInt(grass_obj, "tile_count_coef", 0);
 		_grass_prop._shift = RJH::getFloat(grass_obj, "shift", 0.f);
 		_grass_prop._speed = RJH::getFloat(grass_obj, "speed", 0.f);
-		_grass_prop._size_min = RJH::getFloat(grass_obj, "size_min", 1.f);
-		_grass_prop._size_max = RJH::getFloat(grass_obj, "size_max", 1.f);
+		_grass_prop._patch_x_count = RJH::getInt(grass_obj, "patch_x_count", 1.f);
+		_grass_prop._patch_y_count = RJH::getInt(grass_obj, "patch_y_count", 1.f);
 		auto shadow_obj = RJH::getObject(grass_obj->value, "shadow");
 		_grass_prop._shadow.enable = RJH::getBool(shadow_obj, "enable") && _shdw.size();
 		_grass_prop._shadow.smooth_rate = RJH::getFloat(shadow_obj, "smooth_rate", 0.f);
@@ -137,6 +137,15 @@ void HeightMap::loadProps()
 				layer._text.at(i).grass.diffuse = RJH::getString(grass_obj->value, "diffuse", "");
 				if (_grass_prop._max_rate < layer._text.at(i).grass.rate)
 					_grass_prop._max_rate = layer._text.at(i).grass.rate;
+				auto patch_arr = RJH::getArray(grass_obj->value, "patches");
+				for (auto patch_it = RJH::begin(patch_arr); patch_it != RJH::end(patch_arr); ++patch_it)
+				{
+					HM_PROPERTY::LAYER::TEXTURE::GRASS_DATA::GRASS_PATCH one_patch;
+					one_patch.chance = RJH::getFloat(patch_it, "chance", 0.f);
+					one_patch.size_min = RJH::getFloat(patch_it, "size_min", 0.f);
+					one_patch.size_max = RJH::getFloat(patch_it, "size_max", 0.f);
+					layer._text.at(i).grass.patches.push_back(one_patch);
+				}
 				_grass_prop._text_count++;
 			}
 		}
@@ -604,6 +613,14 @@ void HeightMap::createGrassShader()
 	if (iter4 != attributeInfo.end())
 		layout->setAttribute("a_texIdx", iter4->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, text_idx), false);
 
+	const auto& iter5 = attributeInfo.find("a_size");
+	if (iter5 != attributeInfo.end())
+		layout->setAttribute("a_size", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, size), false);
+
+	const auto& iter6 = attributeInfo.find("a_patch_num");
+	if (iter6 != attributeInfo.end())
+		layout->setAttribute("a_patch_num", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, patch_num), false);
+
 	layout->setLayout(sizeof(GRASS_MODEL::ONEVERTEX_GRASS));
 
 	// Get uniforms
@@ -653,13 +670,13 @@ void HeightMap::createGrassShader()
 	float speed = _grass_prop._speed;
 	_programState->setUniform(speedLoc, &speed, sizeof(speed));
 
-	// Set grass size
-	auto sizeLoc = _programState->getUniformLocation("u_size_min");
-	float size = _grass_prop._size_min;
-	_programState->setUniform(sizeLoc, &size, sizeof(size));
-	sizeLoc = _programState->getUniformLocation("u_size_max");
-	size = _grass_prop._size_max;
-	_programState->setUniform(sizeLoc, &size, sizeof(size));
+	// Set grass patch count
+	auto patchCountLoc = _programState->getUniformLocation("u_patch_x_count");
+	float patch_count = _grass_prop._patch_x_count;
+	_programState->setUniform(patchCountLoc, &patch_count, sizeof(patch_count));
+	patchCountLoc = _programState->getUniformLocation("u_patch_y_count");
+	patch_count = _grass_prop._patch_y_count;
+	_programState->setUniform(patchCountLoc, &patch_count, sizeof(patch_count));
 
 	// Set scale uniform
 	auto scaleLoc = _programState->getUniformLocation("u_scale");
@@ -678,7 +695,6 @@ void HeightMap::createGrassBuffers()
     if (gr_count > _fLod->_w * _fLod->_h)
 	    gr_count = _fLod->_w * _fLod->_h;
 	_gVert.resize(gr_count * _grass_prop._max_rate);
-//	assert(_gVert.size() * 4 < 0xffff); // Since the _gInd type is CustomCommand::IndexFormat::U_SHORT (Otherwise do it as CustomCommand::IndexFormat::U_INT + the inner type of _gInd as 'int')
 
 	// Add first draw data
 	_grass_gl._dd.emplace_back();
@@ -729,11 +745,11 @@ void HeightMap::createGrassBuffers()
 		int sz_i = _grass_gl._dd.at(k).idx_e_i - _grass_gl._dd.at(k).idx_s_i + 1;
 		int delta_i = _grass_gl._dd.at(k).idx_s_i;
 
-		_grass_gl._dd.at(k)._customCommand.createVertexBuffer(sizeof(GRASS_MODEL), sz/*_gVert.size()*/, CustomCommand::BufferUsage::DYNAMIC);
-		_grass_gl._dd.at(k)._customCommand.createIndexBuffer(CustomCommand::IndexFormat::U_SHORT, sz_i/*_gInd.size()*/, CustomCommand::BufferUsage::STATIC);
+		_grass_gl._dd.at(k)._customCommand.createVertexBuffer(sizeof(GRASS_MODEL), sz, CustomCommand::BufferUsage::DYNAMIC);
+		_grass_gl._dd.at(k)._customCommand.createIndexBuffer(CustomCommand::IndexFormat::U_SHORT, sz_i, CustomCommand::BufferUsage::STATIC);
 
-		_grass_gl._dd.at(k)._customCommand.updateVertexBuffer(_gVert.data() + delta, /*_gVert.size()*//*sz_v*/sz * sizeof(GRASS_MODEL));
-		_grass_gl._dd.at(k)._customCommand.updateIndexBuffer(_gInd.data() + delta_i, /*_gInd.size()*/sz_i * sizeof(unsigned short));
+		_grass_gl._dd.at(k)._customCommand.updateVertexBuffer(_gVert.data() + delta, sz * sizeof(GRASS_MODEL));
+		_grass_gl._dd.at(k)._customCommand.updateIndexBuffer(_gInd.data() + delta_i, sz_i * sizeof(unsigned short));
 
 		_grass_gl._dd.at(k)._customCommand.setTransparent(true);
 		_grass_gl._dd.at(k)._customCommand.set3D(true);
@@ -776,7 +792,7 @@ void HeightMap::loadGrassText()
 					CC_SAFE_RELEASE_NULL(_layerData[i]._text[j].grass);
 				}
 
-				if (_prop._layers.at(i)._text.at(j).grass.rate)
+				if (_prop._layers.at(i)._text.at(j).grass.patches.size())
 				{
 					Image* img = new Image();
 					img->initWithImageFile(_prop._layers.at(i)._text.at(j).grass.diffuse);
@@ -805,7 +821,6 @@ void HeightMap::drawGrass(cocos2d::Renderer* renderer, const cocos2d::Mat4& tran
 	for (int i = 0; i < _grass_gl._dd.size(); ++i)
 	{
 		_grass_gl._dd.at(i)._customCommand.init(0);
-//		_grass_gl._dd.at(i)._customCommand.setIndexDrawInfo(0, _grass_gl._draw_mdl_cnt * 6);
 		int draw_i = _grass_gl._draw_mdl_cnt * GRASS_INDEX_PER_MODEL - _grass_gl._dd.at(i).idx_s_i;
 		int sz_i = std::min(_grass_gl._dd.at(i).idx_e_i - _grass_gl._dd.at(i).idx_s_i + 1, draw_i);
 		if (sz_i > 0)
@@ -901,14 +916,12 @@ void HeightMap::disableGrass()
 void HeightMap::updateGrassGLbuffer()
 {
 	_grass_gl._draw_mdl_cnt = _grass_gl._mdl_cnt;
-//	_grass_gl._dd.at(0)._customCommand.updateVertexBuffer(_gVert.data(), 0, sizeof(GRASS_MODEL) * _grass_gl._draw_mdl_cnt);
 	for (int i = 0; i < _grass_gl._dd.size(); ++i)
 	{
 		int delta_v = _grass_gl._dd.at(i).idx_s_v;
 		int delta = delta_v / GRASS_VERTEX_PER_MODEL;
 		int sz_v = _grass_gl._dd.at(i).idx_e_v - delta_v + 1;
 		int size = sz_v / GRASS_VERTEX_PER_MODEL;
-//		_grass_gl._dd.at(i)._customCommand.updateVertexBuffer(_gVert.data() + delta, 0, size * sizeof(GRASS_MODEL)/*_grass_gl._draw_mdl_cnt*/);
 	
 		int draw_v = _grass_gl._draw_mdl_cnt - (_grass_gl._dd.at(i).idx_s_v / GRASS_VERTEX_PER_MODEL);
 		int sz_draw = std::min(size, draw_v);

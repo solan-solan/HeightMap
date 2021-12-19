@@ -58,30 +58,47 @@ Property description:
 
 - "lod_data" - section to describe LOD data
   - "w_h" - vertex count along X and Z axis (2^n + 1)
-  - "text_lod_dist_from" - Texture LOD distance start. Texture will have own size before this distance. Should be farther than previouse LOD is ended. LOD End calculation: (w_h / 2.0) * lod_scale_x_z * 2^(lod_num-1)
-  - "text_lod_dist_to" - Texture LOD distance end. Texture will have size of the next LOD after. Should be less than end of the current LOD. Calculated the same as before. (Texture LOD disable if '0.0')
+  - "text_lod_dist_from" - texture LOD distance start. Texture will have own size before this distance. Should be farther than previouse LOD is ended. LOD End calculation: (w_h / 2.0) * lod_scale_x_z * 2^(lod_num-1)
+  - "text_lod_dist_to" - texture LOD distance end. Texture will have size of the next LOD after. Should be less than end of the current LOD. Calculated the same as before. (Texture LOD disable if '0.0')
+  - "shadow" - section to describe shadow properties for the LOD
+    - "enable" - is shadow enabled for the LOD
+    - "self" - does HeightMap cast own shadow in the LOD
+    - "smooth_rate" - the grade of shadow smoothing on the edges
 - "layers" - section to describe layers data
-  - "dist_view" - Distance where the textures of the layer will be visible. It can be calculated how many LODs will be drawn for the layer using this distance and LOD End calculation formula. (Works starting from the second layer).
+  - "dist_view" - distance where the textures of the layer will be visible. It can be calculated how many LODs will be drawn for the layer using this distance and LOD End calculation formula. (Works starting from the second layer).
   - "text_x" - section to describe texture
     - "diffuse" - diffuse texture path
     - "normal" - normal map texture path
     - "first_lod_size" - size of the texture for the first LOD (Should be chosen base on lod_scale_x_z)
-    - "scale_size_coef" - Coefficient to calculate next LOD size with the formula first_lod_size * scale_size_coef * lod_num
-    - "normal_map_scale" - NormalMap size
-    - "specular_factor" - Specular factor for the texture
-- "lod_chunk_count_w_h" - Count of chunks in the 'basket'. Basket keeps chunks which could be empty. It will be returned default height for the empty chunk. (According to this infinity has been reached).
-- "lod_chunk_size" - Size of one chunk (lod_chunk_size * lod_chunk_size memory under heights will be allocated even one height will be changed from the chunk). It is needed that lod_chunk_count_w_h * lod_chunk_size == 2^n+1
+    - "scale_size_coef" - coefficient to calculate next LOD size with the formula first_lod_size * scale_size_coef * lod_num
+    - "normal_map_scale" - normalMap size
+    - "specular_factor" - specular factor for the texture
+      - "grass" - there is grass property for the texture in the section if it is defined
+        - "diffuse" - diffuse texture with the grass patch samples
+        - "rate" - the count of grass patches in one tile
+        - "patches" - section to describe one patch property
+          - "size_min" - min size of the patch
+          - "size_max" - max size of the patch
+          - "chance" - the chance that the patch will be generated [0.0 .. 1.0]
+- "lod_chunk_count_w_h" - count of chunks in the 'basket'. Basket keeps chunks which could be empty. It will be returned default height for the empty chunk. (According to this infinity has been reached).
+- "lod_chunk_size" - size of one chunk (lod_chunk_size * lod_chunk_size memory under heights will be allocated even one height will be changed from the chunk). It is needed that lod_chunk_count_w_h * lod_chunk_size == 2^n+1
 - "lod_scale_x_z" - scale between vertex along X and Z axis.
 - "lod_scale_y" - scale along Y axis
 - "darker_dist" - distance where ground become darker (may be any)
 - "normal_map_en" - is normal map enable
-- "grass" - section to describe grass
-  - "rate" - How many grass patch is in one HeightMap tile. (Tile belongs to the (-X, -Z) vertex on the grid)
-  - "tile_count_coef" - How many tiles will be occupied by the grass. tile count == (tile_count_coef * 2 + 1) * (tile_count_coef * 2 + 1)
+- "shadow_light_threshold" - threshold to define the shadow darkness in the comparison of the no shadow places
+- "shadow_fade_dist" - the distance where the shadow stops to be represented
+- "grass" - section to describe grass common properties
+  - "tile_count_coef" - how many tiles will be occupied by the grass; tile count == (tile_count_coef * 2 + 1) * (tile_count_coef * 2 + 1)
   - "shift" - max shift of the grass patch inside the tile (Should be chosen according to the lod_scale_x_z)
   - "speed" - speed of the grass animation
-  - "size_min" - min size of the grass patch
-  - "size_max" - max size of the grass patch
+  - "patch_x_count" - the patch samples number in the grass texture along X axis
+  - "patch_y_count" - the patch samples number in the grass texture along Y axis
+  - "shadow" - section to describe shadow properties
+    - "enable" - if the grass can be shadowed
+    - "smooth_rate" - the grade of shadow smoothing on the edges
+    - "light_threshold" - threshold to define the shadow darkness in the comparison of the no shadow places
+    - "fade_dist" - the distance where the shadow stops to be represented
 
 While loading, all vertex coords will be aligned to the 1 glsl point and multiplied on lod_scale_x_z (should be integer).
 
