@@ -24,6 +24,7 @@ uniform vec2 u_dist_alpha;
 #endif
 
 #ifdef GL_ES
+    precision mediump float;
     #ifdef SHADOW
         varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
         varying mediump float v_shadow_fade_dist;

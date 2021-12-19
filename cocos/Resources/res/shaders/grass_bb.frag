@@ -16,7 +16,7 @@
     varying vec2 v_texCoord;
     varying vec3 v_normal;
     varying float v_dist_alpha;
-    varying mediump float v_texIdx;
+    varying float v_texIdx;
 #endif
 
 uniform sampler2D u_texture[GRASS_TEXT_COUNT];
@@ -81,7 +81,7 @@ vec3 computeLighting(vec3 normalVector, vec3 lightDirection)
 void main(void)
 {
 	vec4 combinedColor = vec4(computeLighting(v_normal, -u_DirLight) + u_AmbColLight, 1.0);
-	vec4 px_col = texture2D(u_texture[int(v_texIdx)], v_texCoord);
+	vec4 px_col = texture2D(u_texture[int(step(0.5, v_texIdx))], v_texCoord);
 	if (px_col.a < 0.5) discard;
 
 #ifdef SHADOW

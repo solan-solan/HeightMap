@@ -60,13 +60,11 @@ namespace hm
 		{
 			struct TEXTURE_DATA
 			{
-				cocos2d::Texture2D* diff;
-				cocos2d::Texture2D* norm;
+				cocos2d::Texture2D* diff = nullptr;
+				cocos2d::Texture2D* norm = nullptr;
+				cocos2d::Texture2D* grass = nullptr;
 			} _text[LAYER_TEXTURE_SIZE];
 		} _layerData[MAX_LAYER_COUNT];
-
-		// Grass texture
-		cocos2d::Texture2D* _grassText = nullptr;
 
 		// One grass bush model
 		struct GRASS_MODEL
@@ -76,10 +74,13 @@ namespace hm
 				float i = 0.0;
 				float y = 0.0;
 				float j = 0.0;
-				float ratex = 0;
-				float ratey = 0;
-				float tx = 0;
-				float ty = 0;
+				float ratex = 0.0;
+				float ratey = 0.0;
+				float tx = 0.0;
+				float ty = 0.0;
+				float text_idx = 0.0;
+				float size = 0.0;
+				float patch_num = 0.0;
 			} vert[4];
 			GRASS_MODEL()
 			{
@@ -149,6 +150,19 @@ namespace hm
 					float scale_size_coef = 0.f;
 					float normal_map_scale = 0.f;
 					float specular_factor = 0.f;
+					struct GRASS_DATA
+					{
+						struct GRASS_PATCH
+						{
+							float size_min = 0.f;
+							float size_max = 0.f;
+							float chance = 0.f;
+						};
+						std::string diffuse; // Grass texture for the certain texture
+						unsigned int rate = 0; // Grass rate for the tile with the certain texture
+						unsigned int idx = 0; // Idx of the texture in the gl array
+						std::vector<GRASS_PATCH> patches;
+					} grass;
 				};
 				std::array<TEXTURE, LAYER_TEXTURE_SIZE> _text;
 				float _dist = 0.f;
@@ -185,8 +199,11 @@ namespace hm
 
 		struct GRASS_PROPERTY
 		{
-			// The rate of the grass in one tile (the count of GRASS_MODEL in one tile)
-			unsigned short _rate = 1;
+			// The max rate of the grass in one tile (the count of GRASS_MODEL in one tile)
+			unsigned short _max_rate = 0;
+
+			// Texture grass count
+			unsigned short _text_count = 0;
 
 			// Coefficient to calculate count of tiles where grass to be grown depend on the first lod center
 			unsigned short _tile_count_coef = 0;
@@ -203,11 +220,11 @@ namespace hm
 			// Grass speed
 			float _speed = 0.f;
 
-			// Min grass size
-			float _size_min = 1.f;
+			// Patches count along X
+			float _patch_x_count = 0.f;
 
-			// Max gass size
-			float _size_max = 1.f;
+			// Patches count along Y
+			float _patch_y_count = 0.f;
 
 			// Time passed
 			float _time_passed = 0.f;
@@ -224,7 +241,15 @@ namespace hm
 
 		struct GRASS_GL
 		{
-			cocos2d::CustomCommand _customCommand;
+			struct DRAW_DATA
+			{
+				int idx_s_v = 0;
+				int idx_e_v = 0;
+				int idx_s_i = 0;
+				int idx_e_i = 0;
+				cocos2d::CustomCommand _customCommand;
+			};
+			std::vector<DRAW_DATA> _dd;
 
 			cocos2d::backend::UniformLocation _upLoc;
 			cocos2d::backend::UniformLocation _rightLoc;
@@ -584,8 +609,8 @@ namespace hm
 			return _grass_prop;
 		}
 
-		// Set grass texture
-		void setGrassText(const std::string& grass_text);
+		// load grass texture
+		void loadGrassText();
 
 		// Get shadow cameras
 		const std::vector<ShadowCamera*>& getShadowCameras() const

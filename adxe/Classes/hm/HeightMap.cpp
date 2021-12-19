@@ -8,6 +8,8 @@ using namespace hm;
 using namespace cocos2d;
 
 #define NORMAL_SLOPE 4
+#define GRASS_INDEX_PER_MODEL 6
+#define GRASS_VERTEX_PER_MODEL 4
 
 namespace hm
 {
@@ -87,12 +89,11 @@ void HeightMap::loadProps()
 	if (RJH::isExists(height_data_obj->value, "grass"))
 	{
 		auto grass_obj = RJH::getObject(height_data_obj->value, "grass");
-		_grass_prop._rate = RJH::getInt(grass_obj, "rate", 1);
 		_grass_prop._tile_count_coef = RJH::getInt(grass_obj, "tile_count_coef", 0);
 		_grass_prop._shift = RJH::getFloat(grass_obj, "shift", 0.f);
 		_grass_prop._speed = RJH::getFloat(grass_obj, "speed", 0.f);
-		_grass_prop._size_min = RJH::getFloat(grass_obj, "size_min", 1.f);
-		_grass_prop._size_max = RJH::getFloat(grass_obj, "size_max", 1.f);
+		_grass_prop._patch_x_count = RJH::getInt(grass_obj, "patch_x_count", 1.f);
+		_grass_prop._patch_y_count = RJH::getInt(grass_obj, "patch_y_count", 1.f);
 		auto shadow_obj = RJH::getObject(grass_obj->value, "shadow");
 		_grass_prop._shadow.enable = RJH::getBool(shadow_obj, "enable") && _shdw.size();
 		_grass_prop._shadow.smooth_rate = RJH::getFloat(shadow_obj, "smooth_rate", 0.f);
@@ -128,6 +129,25 @@ void HeightMap::loadProps()
 			layer._text.at(i).scale_size_coef = RJH::getFloat(text_obj, "scale_size_coef", 0.f);
 			layer._text.at(i).normal_map_scale = RJH::getFloat(text_obj, "normal_map_scale", 0.f);
 			layer._text.at(i).specular_factor = RJH::getFloat(text_obj, "specular_factor", 0.f);
+
+			if (RJH::isExists(text_obj->value, "grass"))
+			{
+				auto grass_obj = RJH::getObject(text_obj->value, "grass");
+				layer._text.at(i).grass.rate = RJH::getInt(grass_obj, "rate", 0);
+				layer._text.at(i).grass.diffuse = RJH::getString(grass_obj->value, "diffuse", "");
+				if (_grass_prop._max_rate < layer._text.at(i).grass.rate)
+					_grass_prop._max_rate = layer._text.at(i).grass.rate;
+				auto patch_arr = RJH::getArray(grass_obj->value, "patches");
+				for (auto patch_it = RJH::begin(patch_arr); patch_it != RJH::end(patch_arr); ++patch_it)
+				{
+					HM_PROPERTY::LAYER::TEXTURE::GRASS_DATA::GRASS_PATCH one_patch;
+					one_patch.chance = RJH::getFloat(patch_it, "chance", 0.f);
+					one_patch.size_min = RJH::getFloat(patch_it, "size_min", 0.f);
+					one_patch.size_max = RJH::getFloat(patch_it, "size_max", 0.f);
+					layer._text.at(i).grass.patches.push_back(one_patch);
+				}
+				_grass_prop._text_count++;
+			}
 		}
 		_prop._layers.push_back(layer);
 	}
@@ -559,15 +579,19 @@ void HeightMap::createGrassShader()
 	std::string vert_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/grass_bb.vert");
 	std::string fr_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/grass_bb.frag");
 	
-	std::string def;
+	std::string def = StringUtils::format("#define GRASS_TEXT_COUNT %i\n", _grass_prop._text_count);
 	if (_grass_prop._shadow.enable)
 		def += StringUtils::format("#define SHADOW\n#define DEPTH_TEXT_COUNT %i\n", _shdw.size());
 
 	auto program = backend::Device::getInstance()->newProgram(def + vert_sh, def + fr_sh);
 	_programState = new backend::ProgramState(program);
 
-	auto& pipelineDescriptor = _grass_gl._customCommand.getPipelineDescriptor();
-	pipelineDescriptor.programState = _programState;
+	for (int i = 0; i < _grass_gl._dd.size(); ++i)
+	{
+		auto& pipelineDescriptor = _grass_gl._dd.at(i)._customCommand.getPipelineDescriptor();
+		pipelineDescriptor.programState = _programState;
+	}
+
 	auto layout = _programState->getVertexLayout();
 
 	const auto& attributeInfo = _programState->getProgram()->getActiveAttributes();
@@ -584,6 +608,18 @@ void HeightMap::createGrassShader()
 	const auto& iter3 = attributeInfo.find("a_texCoord");
 	if (iter3 != attributeInfo.end())
 		layout->setAttribute("a_texCoord", iter3->second.location, backend::VertexFormat::FLOAT2, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, tx), false);
+
+	const auto& iter4 = attributeInfo.find("a_texIdx");
+	if (iter4 != attributeInfo.end())
+		layout->setAttribute("a_texIdx", iter4->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, text_idx), false);
+
+	const auto& iter5 = attributeInfo.find("a_size");
+	if (iter5 != attributeInfo.end())
+		layout->setAttribute("a_size", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, size), false);
+
+	const auto& iter6 = attributeInfo.find("a_patch_num");
+	if (iter6 != attributeInfo.end())
+		layout->setAttribute("a_patch_num", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, patch_num), false);
 
 	layout->setLayout(sizeof(GRASS_MODEL::ONEVERTEX_GRASS));
 
@@ -607,7 +643,7 @@ void HeightMap::createGrassShader()
 		std::vector<cocos2d::backend::TextureBackend*> txt;
 		auto texels_loc = _programState->getUniformLocation("u_texelSize_sh");
 		auto depth_loc = _programState->getUniformLocation("u_text_sh");
-		int text_slot = 1; // 0 slot is under grass texture
+		int text_slot = _grass_prop._text_count;
 		for (int j = 0; j < cameras.size(); ++j)
 		{
 			Size sz = cameras[j]->getRenderText()->getDepthText()->getContentSizeInPixels();
@@ -634,13 +670,13 @@ void HeightMap::createGrassShader()
 	float speed = _grass_prop._speed;
 	_programState->setUniform(speedLoc, &speed, sizeof(speed));
 
-	// Set grass size
-	auto sizeLoc = _programState->getUniformLocation("u_size_min");
-	float size = _grass_prop._size_min;
-	_programState->setUniform(sizeLoc, &size, sizeof(size));
-	sizeLoc = _programState->getUniformLocation("u_size_max");
-	size = _grass_prop._size_max;
-	_programState->setUniform(sizeLoc, &size, sizeof(size));
+	// Set grass patch count
+	auto patchCountLoc = _programState->getUniformLocation("u_patch_x_count");
+	float patch_count = _grass_prop._patch_x_count;
+	_programState->setUniform(patchCountLoc, &patch_count, sizeof(patch_count));
+	patchCountLoc = _programState->getUniformLocation("u_patch_y_count");
+	patch_count = _grass_prop._patch_y_count;
+	_programState->setUniform(patchCountLoc, &patch_count, sizeof(patch_count));
 
 	// Set scale uniform
 	auto scaleLoc = _programState->getUniformLocation("u_scale");
@@ -658,79 +694,141 @@ void HeightMap::createGrassBuffers()
 	auto gr_count = (_grass_prop._tile_count_coef * 2 + 1) * (_grass_prop._tile_count_coef * 2 + 1);
     if (gr_count > _fLod->_w * _fLod->_h)
 	    gr_count = _fLod->_w * _fLod->_h;
-	_gVert.resize(gr_count * _grass_prop._rate);
-	assert(_gVert.size() * 4 < 0xffff); // Since the _gInd type is CustomCommand::IndexFormat::U_SHORT (Otherwise do it as CustomCommand::IndexFormat::U_INT + the inner type of _gInd as 'int')
+	_gVert.resize(gr_count * _grass_prop._max_rate);
+
+	// Add first draw data
+	_grass_gl._dd.emplace_back();
+	int num_draw = 0;
 
 	// Index array
-	for (int i = 0, j = 0; i < _gVert.size() * 4; i += 4, ++j)
+	int v_from = 0;
+	int i_from = 0;
+	int i, j;
+	for (i = 0, j = 0; i < _gVert.size() * GRASS_VERTEX_PER_MODEL; i += GRASS_VERTEX_PER_MODEL, ++j)
 	{
+		if ((i + (GRASS_VERTEX_PER_MODEL - 1) - v_from) >= 0xffff)
+		{
+			_grass_gl._dd.at(num_draw).idx_s_v = v_from;
+			_grass_gl._dd.at(num_draw).idx_e_v = i - 1;
+			v_from = i;
+
+			_grass_gl._dd.at(num_draw).idx_s_i = i_from;
+			_grass_gl._dd.at(num_draw).idx_e_i = _gInd.size() - 1;
+			i_from = _gInd.size();
+
+			// Add next draw data
+			_grass_gl._dd.emplace_back();
+			num_draw++;
+		}
+
 		// First tris
-		_gInd.push_back(i);
-		_gInd.push_back(i + 3);
-		_gInd.push_back(i + 1);
+		_gInd.push_back(i - v_from);
+		_gInd.push_back(i + 3 - v_from);
+		_gInd.push_back(i + 1 - v_from);
 		// Second tris
-		_gInd.push_back(i + 3);
-		_gInd.push_back(i + 2);
-		_gInd.push_back(i + 1);
+		_gInd.push_back(i + 3 - v_from);
+		_gInd.push_back(i + 2 - v_from);
+		_gInd.push_back(i + 1 - v_from);
 	}
-	int last = _gInd.at(_gInd.size() - 1);
 
-	_grass_gl._customCommand.createVertexBuffer(sizeof(GRASS_MODEL), _gVert.size(), CustomCommand::BufferUsage::DYNAMIC);
-	_grass_gl._customCommand.createIndexBuffer(CustomCommand::IndexFormat::U_SHORT, _gInd.size(), CustomCommand::BufferUsage::STATIC);
+	_grass_gl._dd.at(num_draw).idx_s_v = v_from;
+	_grass_gl._dd.at(num_draw).idx_e_v = i - 1;
+	_grass_gl._dd.at(num_draw).idx_s_i = i_from;
+	_grass_gl._dd.at(num_draw).idx_e_i = _gInd.size() - 1;
 
-	_grass_gl._customCommand.updateVertexBuffer(_gVert.data(), _gVert.size() * sizeof(GRASS_MODEL));
-	_grass_gl._customCommand.updateIndexBuffer(_gInd.data(), _gInd.size() * sizeof(unsigned short));
+	for (int k = 0; k < _grass_gl._dd.size(); ++k)
+	{
+		int sz_v = _grass_gl._dd.at(k).idx_e_v - _grass_gl._dd.at(k).idx_s_v + 1;
+		int sz = sz_v / GRASS_VERTEX_PER_MODEL;
+		int delta_v = _grass_gl._dd.at(k).idx_s_v;
+		int delta = delta_v / GRASS_VERTEX_PER_MODEL;
+		int sz_i = _grass_gl._dd.at(k).idx_e_i - _grass_gl._dd.at(k).idx_s_i + 1;
+		int delta_i = _grass_gl._dd.at(k).idx_s_i;
 
-	_grass_gl._customCommand.setTransparent(true);
-	_grass_gl._customCommand.set3D(true);
+		_grass_gl._dd.at(k)._customCommand.createVertexBuffer(sizeof(GRASS_MODEL), sz, CustomCommand::BufferUsage::DYNAMIC);
+		_grass_gl._dd.at(k)._customCommand.createIndexBuffer(CustomCommand::IndexFormat::U_SHORT, sz_i, CustomCommand::BufferUsage::STATIC);
 
-	_grass_gl._customCommand.setBeforeCallback(CC_CALLBACK_0(HeightMap::onBeforeDraw, this));
-	_grass_gl._customCommand.setAfterCallback(CC_CALLBACK_0(HeightMap::onAfterDraw, this));
+		_grass_gl._dd.at(k)._customCommand.updateVertexBuffer(_gVert.data() + delta, sz * sizeof(GRASS_MODEL));
+		_grass_gl._dd.at(k)._customCommand.updateIndexBuffer(_gInd.data() + delta_i, sz_i * sizeof(unsigned short));
 
-	// Set blending
-	auto& blend = _grass_gl._customCommand.getPipelineDescriptor().blendDescriptor;
-	blend.blendEnabled = true;
-	blend.sourceRGBBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
-	blend.destinationRGBBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
-	blend.sourceAlphaBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
-	blend.destinationAlphaBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+		_grass_gl._dd.at(k)._customCommand.setTransparent(true);
+		_grass_gl._dd.at(k)._customCommand.set3D(true);
+
+		_grass_gl._dd.at(k)._customCommand.setBeforeCallback(CC_CALLBACK_0(HeightMap::onBeforeDraw, this));
+		_grass_gl._dd.at(k)._customCommand.setAfterCallback(CC_CALLBACK_0(HeightMap::onAfterDraw, this));
+
+		// Set blending
+		auto& blend = _grass_gl._dd.at(k)._customCommand.getPipelineDescriptor().blendDescriptor;
+		blend.blendEnabled = true;
+		blend.sourceRGBBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
+		blend.destinationRGBBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+		blend.sourceAlphaBlendFactor = cocos2d::backend::BlendFactor::SRC_ALPHA;
+		blend.destinationAlphaBlendFactor = cocos2d::backend::BlendFactor::ONE_MINUS_SRC_ALPHA;
+	}
 }
 
-void HeightMap::setGrassText(const std::string& grass_text)
+void HeightMap::loadGrassText()
 {
 	if (_programState)
 	{
-		if (_grassText)
-		{
-			clearProgramStateTextures(_programState);
-			assert(_grassText->getReferenceCount() == 1 && _grassText->getBackendTexture()->getReferenceCount() == 1);
-			CC_SAFE_RELEASE_NULL(_grassText);
-		}
-
 		Texture2D::TexParams texPar;
 		texPar.sAddressMode = cocos2d::backend::SamplerAddressMode::CLAMP_TO_EDGE;
 		texPar.tAddressMode = cocos2d::backend::SamplerAddressMode::CLAMP_TO_EDGE;
 		texPar.minFilter = cocos2d::backend::SamplerFilter::LINEAR_MIPMAP_LINEAR;
 		texPar.magFilter = cocos2d::backend::SamplerFilter::LINEAR;
 
-		Image* img = new Image();
-		img->initWithImageFile(grass_text);
-		_grassText = new Texture2D();
-		_grassText->initWithImage(img, backend::PixelFormat::RGBA8888);
-		_grassText->setTexParameters(texPar);
-		_grassText->generateMipmap();
-		delete img;
+		int text_slot = 0;
+		std::vector<int> slots;
+		std::vector<cocos2d::backend::TextureBackend*> txt;
+		int k = 0;
+		for (int i = 0; i < _prop._layers.size(); ++i)
+		{
+			for (int j = 0; j < LAYER_TEXTURE_SIZE; ++j)
+			{
+				if (_layerData[i]._text[j].grass)
+				{
+					clearProgramStateTextures(_programState);
+					assert(_layerData[i]._text[j].grass->getReferenceCount() == 1 && _layerData[i]._text[j].grass->getBackendTexture()->getReferenceCount() == 1);
+					CC_SAFE_RELEASE_NULL(_layerData[i]._text[j].grass);
+				}
+
+				if (_prop._layers.at(i)._text.at(j).grass.patches.size())
+				{
+					Image* img = new Image();
+					img->initWithImageFile(_prop._layers.at(i)._text.at(j).grass.diffuse);
+					auto* gr_text = new Texture2D();
+					gr_text->initWithImage(img, backend::PixelFormat::RGBA8888);
+					gr_text->setTexParameters(texPar);
+					gr_text->generateMipmap();
+					delete img;
+
+					_prop._layers.at(i)._text.at(j).grass.idx = k;
+					slots.push_back(k + text_slot);
+					txt.push_back(gr_text->getBackendTexture());
+					k++;
+					_layerData[i]._text[j].grass = gr_text;
+				}
+			}
+		}
 
 		auto textLoc = _programState->getUniformLocation("u_texture");
-		_programState->setTexture(textLoc, 0, _grassText->getBackendTexture());
+		_programState->setTextureArray(textLoc, slots, txt);
 	}
 }
 
 void HeightMap::drawGrass(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags)
 {
-	_grass_gl._customCommand.init(0);
-	_grass_gl._customCommand.setIndexDrawInfo(0, _grass_gl._draw_mdl_cnt * 6);
-	renderer->addCommand(&_grass_gl._customCommand);
+	for (int i = 0; i < _grass_gl._dd.size(); ++i)
+	{
+		_grass_gl._dd.at(i)._customCommand.init(0);
+		int draw_i = _grass_gl._draw_mdl_cnt * GRASS_INDEX_PER_MODEL - _grass_gl._dd.at(i).idx_s_i;
+		int sz_i = std::min(_grass_gl._dd.at(i).idx_e_i - _grass_gl._dd.at(i).idx_s_i + 1, draw_i);
+		if (sz_i > 0)
+		{
+			_grass_gl._dd.at(i)._customCommand.setIndexDrawInfo(0, sz_i);
+			renderer->addCommand(&_grass_gl._dd.at(i)._customCommand);
+		}
+	}
 
 	// Set atmosphere light direction
 	_programState->setUniform(_grass_gl._light_dirLoc, &_prop._light.dirAtmLight, sizeof(_prop._light.dirAtmLight));
@@ -785,8 +883,9 @@ void HeightMap::enableGrass()
 	if (_programState)
 		return; // The grass is rendering already
 	// Create grass gl buffers and shader only for the first layer
-	createGrassShader();
 	createGrassBuffers();
+	createGrassShader();
+	loadGrassText();
 }
 
 void HeightMap::disableGrass()
@@ -798,21 +897,37 @@ void HeightMap::disableGrass()
 		assert(_programState->getReferenceCount() == 1);
 		CC_SAFE_RELEASE_NULL(_programState);
 
-		if (_grassText)
-		{
-			assert(_grassText->getReferenceCount() == 1 && _grassText->getBackendTexture()->getReferenceCount() == 1);
-			CC_SAFE_RELEASE_NULL(_grassText);
-		}
+		for (int q = 0; q < _prop._layers.size(); ++q)
+			for (int i = 0; i < LAYER_TEXTURE_SIZE; ++i)
+			{
+				if (_layerData[q]._text[i].grass)
+				{
+					assert(_layerData[q]._text[i].grass->getReferenceCount() == 1 && _layerData[q]._text[i].grass->getBackendTexture()->getReferenceCount() == 1);
+					CC_SAFE_RELEASE_NULL(_layerData[q]._text[i].grass);
+				}
+			}
 
 		_gVert.clear();
 		_gInd.clear();
+		_grass_gl._dd.clear();
 	}
 }
 
 void HeightMap::updateGrassGLbuffer()
 {
 	_grass_gl._draw_mdl_cnt = _grass_gl._mdl_cnt;
-	_grass_gl._customCommand.updateVertexBuffer(_gVert.data(), 0, sizeof(GRASS_MODEL) * _grass_gl._draw_mdl_cnt);
+	for (int i = 0; i < _grass_gl._dd.size(); ++i)
+	{
+		int delta_v = _grass_gl._dd.at(i).idx_s_v;
+		int delta = delta_v / GRASS_VERTEX_PER_MODEL;
+		int sz_v = _grass_gl._dd.at(i).idx_e_v - delta_v + 1;
+		int size = sz_v / GRASS_VERTEX_PER_MODEL;
+	
+		int draw_v = _grass_gl._draw_mdl_cnt - (_grass_gl._dd.at(i).idx_s_v / GRASS_VERTEX_PER_MODEL);
+		int sz_draw = std::min(size, draw_v);
+		if (sz_draw > 0)
+			_grass_gl._dd.at(i)._customCommand.updateVertexBuffer(_gVert.data() + delta, 0, sz_draw * sizeof(GRASS_MODEL));
+	}
 }
 
 const OneChunk::ONE_HEIGHT& HeightMap::getTileData(float x_w, float z_w, std::pair<unsigned short, unsigned short>& _loc_idx)
@@ -1287,10 +1402,10 @@ unsigned int HeightMap::color_to_alpha(Vec4& color)
 
 	typedef unsigned int uuiint;
 
-	return (uuiint(0xff * color.w) << 24) |
-		(uuiint(0xff * color.z) << 16) |
-		(uuiint(0xff * color.y) << 8) |
-			uuiint(0xff * color.x);
+	return (uuiint(0xff * color.x) << 24) |
+		(uuiint(0xff * color.y) << 16) |
+		(uuiint(0xff * color.z) << 8) |
+			uuiint(0xff * color.w);
 }
 
 void HeightMap::clearProgramStateTextures(cocos2d::backend::ProgramState* programState)
