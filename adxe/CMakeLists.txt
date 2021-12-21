@@ -1,8 +1,8 @@
 #/****************************************************************************
 # Copyright (c) 2013-2014 cocos2d-x.org
-# Copyright (c) 2015-2017 Chukong Technologies Inc.
+# Copyright (c) 2021 Bytedance Inc.
 #
-# http://www.cocos2d-x.org
+# https://adxe.org
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,16 @@ set(APP_NAME MyGame)
 
 project(${APP_NAME})
 
-if(NOT DEFINED BUILD_ENGINE_DONE) # to test HelloCpp into root project
+if(NOT DEFINED BUILD_ENGINE_DONE) # to test MyGame into root project
+    if(XCODE)
+        set(CMAKE_XCODE_GENERATE_TOP_LEVEL_PROJECT_ONLY TRUE)
+    endif()
+    
+    # config quick starter batch script run.bat for windows
+    if(WIN32)
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/run.bat.in" "${CMAKE_CURRENT_SOURCE_DIR}/run.bat" @ONLY)
+    endif()
+
     set(ADXE_ROOT "$ENV{ADXE_ROOT}")
 
     if(NOT (ADXE_ROOT STREQUAL ""))
@@ -58,15 +67,15 @@ endif()
 
 # add cross-platforms source files and header files 
 list(APPEND GAME_SOURCE
-    Classes/AppDelegate.cpp
-    Classes/HelloWorldScene.cpp
-    Classes/hm/HeightMap.cpp
-    Classes/hm/LodHM.cpp
-    Classes/hm/HeightChunk.cpp
-    Classes/hm/rjh.cpp
-	Classes/hm/RenderTexture3D.cpp
-	Classes/hm/ShadowCamera.cpp
-    )
+     Classes/AppDelegate.cpp
+     Classes/HelloWorldScene.cpp
+     Classes/hm/HeightMap.cpp
+     Classes/hm/LodHM.cpp
+     Classes/hm/HeightChunk.cpp
+     Classes/hm/rjh.cpp
+     Classes/hm/RenderTexture3D.cpp
+     Classes/hm/ShadowCamera.cpp
+     )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
      Classes/HelloWorldScene.h
@@ -75,8 +84,8 @@ list(APPEND GAME_HEADER
      Classes/hm/HeightChunk.h
      Classes/hm/CenterArray.h
      Classes/hm/rjh.h
-	 Classes/hm/RenderTexture3D.h
-	 Classes/hm/ShadowCamera.h
+     Classes/hm/RenderTexture3D.h
+     Classes/hm/ShadowCamera.h
      )
 
 if(ANDROID)
@@ -156,6 +165,7 @@ setup_cocos_app_config(${APP_NAME})
 if(APPLE)
     set_target_properties(${APP_NAME} PROPERTIES RESOURCE "${APP_UI_RES}")
     set_xcode_property(${APP_NAME} INSTALL_PATH "\$(LOCAL_APPS_DIR)")
+    set_xcode_property(${APP_NAME} PRODUCT_BUNDLE_IDENTIFIER "org.adxe.hellocpp")
 
     if(MACOSX)
         set_target_properties(${APP_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/proj.ios_mac/mac/Info.plist")
@@ -170,7 +180,9 @@ elseif(WINDOWS)
     cocos_copy_target_dll(${APP_NAME})
 endif()
 
-if(LINUX OR WINDOWS)
+if(WINDOWS)
+    set_property(TARGET ${APP_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${GAME_RES_FOLDER}")
+elseif(LINUX)
     cocos_get_resource_path(APP_RES_DIR ${APP_NAME})
     cocos_copy_target_res(${APP_NAME} LINK_TO ${APP_RES_DIR} FOLDERS ${GAME_RES_FOLDER})
 endif()
