@@ -1,7 +1,8 @@
 #include "ShadowCamera.h"
-#include "RenderTexture3D.h"
+#include "../pp/RenderTexture3D.h"
 
 using namespace cocos2d;
+using namespace pp;
 using namespace hm;
 
 ShadowCamera::~ShadowCamera()
@@ -37,7 +38,7 @@ bool ShadowCamera::init(float zoomX, float zoomY, float plane, int depth_text_si
 	_viewProjectionDirty = true;
 	_frustumDirty = true;
 
-	_shdwText = RenderTexture3D::create(depth_text_size, depth_text_size, backend::PixelFormat::RGBA8888, backend::PixelFormat::D24S8, RenderTargetFlag::DEPTH);
+	_shdwText = RenderTexture3D::create(depth_text_size, depth_text_size, backend::PixelFormat::RGBA8, backend::PixelFormat::D24S8, RenderTargetFlag::DEPTH);
 	_shdwText->retain();
 
 	return true;

@@ -3,9 +3,10 @@
 #include "RenderTexture3D.h"
 #include "renderer/backend/CommandBuffer.h"
 #include "renderer/backend/Device.h"
+#include "renderer/backend/RenderTarget.h"
 
 using namespace cocos2d;
-using namespace hm;
+using namespace pp;
 
 RenderTexture3D::RenderTexture3D()
 {
@@ -60,33 +61,46 @@ void RenderTexture3D::begin()
     renderer->addCommand(&_groupCommand);
     renderer->pushGroup(_groupCommand.getRenderQueueID());
 
-	_beginCommand.init(_globalZOrder, _transformMatrix, Node::FLAGS_RENDER_AS_3D);
-	_beginCommand.setTransparent(_is_transparent_begin);
-    _beginCommand.func = CC_CALLBACK_0(RenderTexture3D::onBegin, this);
-    renderer->addCommand(&_beginCommand);
+	auto* beginCommand = renderer->nextCallbackCommand();
+	beginCommand->init(_globalZOrder, _transformMatrix, Node::FLAGS_RENDER_AS_3D);
+	beginCommand->setTransparent(_is_transparent_begin);
+    beginCommand->func = CC_CALLBACK_0(RenderTexture3D::onBegin, this);
+    renderer->addCommand(beginCommand);
+}
+
+void RenderTexture3D::onBegin()
+{
+	RenderTexture::onBegin();
+
+	_renderTarget->setColorAttachment(_texture2D ? _texture2D->getBackendTexture() : nullptr);
+	auto depthStencilTexture = _depthStencilTexture ? _depthStencilTexture->getBackendTexture() : nullptr;
+	_renderTarget->setDepthAttachment(depthStencilTexture);
+	_renderTarget->setStencilAttachment(depthStencilTexture);
 }
 
 void RenderTexture3D::end()
 {
-    _endCommand.init(_globalZOrder);
-	_endCommand.set3D(true);
+	auto* endCommand = _director->getRenderer()->nextCallbackCommand();
+    endCommand->init(_globalZOrder);
+	endCommand->set3D(true);
 
 	//----------- It is needed to provide this command to be last in the transparent queue 
-	class CallbackCommandExt : public CallbackCommand
+	class RenderCommandExt : public RenderCommand
 	{
 		friend RenderTexture3D;
 	};
-	static_cast<CallbackCommandExt*>(&_endCommand)->_depth = std::numeric_limits<float>::lowest();
+	RenderCommand* renCmd = endCommand;
+	static_cast<RenderCommandExt*>(renCmd)->_depth = std::numeric_limits<float>::lowest();
 	//-----------
 
-	_endCommand.setTransparent(_is_transparent_end);
-    _endCommand.func = CC_CALLBACK_0(RenderTexture3D::onEnd, this);
+	endCommand->setTransparent(_is_transparent_end);
+    endCommand->func = CC_CALLBACK_0(RenderTexture3D::onEnd, this);
 
     Director* director = Director::getInstance();
     CCASSERT(nullptr != director, "Director is null when setting matrix stack");
     
     Renderer *renderer = director->getRenderer();
-    renderer->addCommand(&_endCommand);
+    renderer->addCommand(endCommand);
     renderer->popGroup();
 
     director->popMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_PROJECTION);
@@ -133,7 +147,7 @@ bool RenderTexture3D::initWithWidthAndHeight(int w, int h, cocos2d::backend::Pix
 		descriptor.width = powW;
 		descriptor.height = powH;
 		descriptor.textureUsage = TextureUsage::RENDER_TARGET;
-		descriptor.textureFormat = PixelFormat::RGBA8888;
+		descriptor.textureFormat = PixelFormat::RGBA8;
 
 		if (bitmask::any(_renderTargetFlags, RenderTargetFlag::COLOR))
 		{
@@ -146,10 +160,10 @@ bool RenderTexture3D::initWithWidthAndHeight(int w, int h, cocos2d::backend::Pix
 				break;
 
 			_texture2D->setAntiAliasTexParameters();
-			if (_texture2DCopy)
-			{
-				_texture2DCopy->setAntiAliasTexParameters();
-			}
+			//if (_texture2DCopy)
+			//{
+			//	_texture2DCopy->setAntiAliasTexParameters();
+			//}
 		}
 
 		if (bitmask::any(_renderTargetFlags, (RenderTargetFlag::DEPTH | RenderTargetFlag::STENCIL)) && PixelFormat::D24S8 == depthStencilFormat)
@@ -166,11 +180,22 @@ bool RenderTexture3D::initWithWidthAndHeight(int w, int h, cocos2d::backend::Pix
 			_depthStencilTexture->updateTextureDescriptor(descriptor);
 		}
 
-		_renderTarget = backend::Device::getInstance()->newRenderTarget(_renderTargetFlags,
-			_texture2D ? _texture2D->getBackendTexture() : nullptr,
-			_depthStencilTexture ? _depthStencilTexture->getBackendTexture() : nullptr,
-			_depthStencilTexture ? _depthStencilTexture->getBackendTexture() : nullptr
-		);
+//		_renderTarget = backend::Device::getInstance()->newRenderTarget(_renderTargetFlags,
+//			_texture2D ? _texture2D->getBackendTexture() : nullptr,
+//			_depthStencilTexture ? _depthStencilTexture->getBackendTexture() : nullptr,
+//			_depthStencilTexture ? _depthStencilTexture->getBackendTexture() : nullptr
+//		);
+
+		_renderTarget = _director->getRenderer()->getOffscreenRenderTarget();
+		_renderTarget->retain();
+
+//		_renderTarget->setColorAttachment(_texture2D ? _texture2D->getBackendTexture() : nullptr);
+
+//		auto depthStencilTexture = _depthStencilTexture ? _depthStencilTexture->getBackendTexture() : nullptr;
+//		_renderTarget->setDepthAttachment(depthStencilTexture);
+//		_renderTarget->setStencilAttachment(depthStencilTexture);
+
+//		clearColorAttachment();
 
 		// Disabled by default.
 		_autoDraw = false;
@@ -197,7 +222,7 @@ void RenderTexture3D::beginWithClear(float r, float g, float b, float a, float d
 		{
 			_clearFlag = flags;
 
-			CallbackCommand* command = nextClearCommand();
+			CallbackCommand* command = nextCallbackCommand();
 			command->init(globalOrder);
 			command->set3D(true);
 			command->setTransparent(false);
@@ -219,8 +244,6 @@ void RenderTexture3D::beginWithClear(float r, float g, float b, float a, float d
 				_commandBuffer->beginRenderPass(_currentRT, descriptor);
 				_commandBuffer->endRenderPass();
 
-				// push to pool for reuse
-				_clearCommandsPool.push_back(command);
 			};
 			addCommand(command);
 		}
@@ -231,6 +254,7 @@ void RenderTexture3D::beginWithClear(float r, float g, float b, float a, float d
 
 RenderTexture3D::~RenderTexture3D()
 {
-	assert(!_texture2D || (_texture2D->getReferenceCount() == 2 && _texture2D->getBackendTexture()->getReferenceCount() == 2));
+	// Backend texture can be caught by the RenderTarget or not
+	assert(!_texture2D || (_texture2D->getReferenceCount() == 2 && _texture2D->getBackendTexture()->getReferenceCount() <= 2));
 	CC_SAFE_RELEASE(_texture2D);
 }

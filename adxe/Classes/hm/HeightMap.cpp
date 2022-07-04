@@ -2,9 +2,10 @@
 #include "rjh.h"
 #include "renderer/backend/Device.h"
 #include "ShadowCamera.h"
-#include "RenderTexture3D.h"
+#include "../pp/RenderTexture3D.h"
 
 using namespace hm;
+using namespace pp;
 using namespace cocos2d;
 
 #define NORMAL_SLOPE 4
@@ -538,7 +539,7 @@ void HeightMap::loadTextures()
 				Image* img = new Image();
 				img->initWithImageData(data.getBytes(), data.getSize());
 				_layerData[i]._text[j].diff = new Texture2D();
-				_layerData[i]._text[j].diff->initWithImage(img, backend::PixelFormat::RGB888);
+				_layerData[i]._text[j].diff->initWithImage(img, backend::PixelFormat::RGB8);
 				_layerData[i]._text[j].diff->setTexParameters(texPar);
 				_layerData[i]._text[j].diff->generateMipmap();
 
@@ -552,7 +553,7 @@ void HeightMap::loadTextures()
 					Image* img = new Image();
 					img->initWithImageData(data.getBytes(), data.getSize());
 					_layerData[i]._text[j].norm = new Texture2D();
-					_layerData[i]._text[j].norm->initWithImage(img, backend::PixelFormat::RGB888);
+					_layerData[i]._text[j].norm->initWithImage(img, backend::PixelFormat::RGB8);
 					_layerData[i]._text[j].norm->setTexParameters(texPar);
 					_layerData[i]._text[j].norm->generateMipmap();
 
@@ -797,7 +798,7 @@ void HeightMap::loadGrassText()
 					Image* img = new Image();
 					img->initWithImageFile(_prop._layers.at(i)._text.at(j).grass.diffuse);
 					auto* gr_text = new Texture2D();
-					gr_text->initWithImage(img, backend::PixelFormat::RGBA8888);
+					gr_text->initWithImage(img, backend::PixelFormat::RGBA8);
 					gr_text->setTexParameters(texPar);
 					gr_text->generateMipmap();
 					delete img;

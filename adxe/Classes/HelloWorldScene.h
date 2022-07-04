@@ -51,7 +51,7 @@ private:
 
     // Vector of visit methods coresponding to the Camera flag
     typedef void(HelloWorld::* visit_ptr)(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
-    std::array<visit_ptr, 3> _visit;
+    std::array<visit_ptr, 5> _visit;
 
     struct CAMERA_SETTINGS
     {
@@ -91,6 +91,7 @@ public:
     virtual bool init();
     virtual void visit(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
     void visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
+    void visit_pp(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
     void visit_shadow_local(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
     void visit_shadow_world(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags);
 
@@ -99,6 +100,7 @@ public:
     
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
+    virtual ~HelloWorld();
 
     void onTouchesBegan(const std::vector<cocos2d::Touch*>& touches, cocos2d::Event* event);
     void onTouchesMoved(const std::vector<cocos2d::Touch*>& touches, cocos2d::Event* event);

@@ -3,7 +3,7 @@
 
 #include "2d/CCRenderTexture.h"
 
-namespace hm
+namespace pp
 {
 
 	class RenderTexture3D : public cocos2d::RenderTexture
@@ -51,6 +51,7 @@ namespace hm
 
 	protected:
 		bool initWithWidthAndHeight(int w, int h, cocos2d::backend::PixelFormat format, cocos2d::backend::PixelFormat depthStencilFormat, cocos2d::RenderTargetFlag flag);
+		void onBegin();
 	};
 
 }
