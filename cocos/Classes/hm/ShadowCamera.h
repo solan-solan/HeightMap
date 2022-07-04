@@ -3,16 +3,19 @@
 
 #include "cocos2d.h"
 
-namespace hm
+namespace pp
 {
 	class RenderTexture3D;
+}
 
+namespace hm
+{
 	class ShadowCamera : public cocos2d::Camera
 	{
 
 	private:
 
-		RenderTexture3D* _shdwText = nullptr;
+		pp::RenderTexture3D* _shdwText = nullptr;
 
 	protected:
 
@@ -24,7 +27,7 @@ namespace hm
 
 		static ShadowCamera* create(float zoomX, float zoomY, float plane, int depth_text_size);
 
-		RenderTexture3D* getRenderText() const
+		pp::RenderTexture3D* getRenderText() const
 		{
 			return _shdwText;
 		}

@@ -3,7 +3,7 @@
 
 #include "2d/CCRenderTexture.h"
 
-namespace hm
+namespace pp
 {
 
 	class RenderTexture3D : public cocos2d::RenderTexture

@@ -1,7 +1,8 @@
 #include "ShadowCamera.h"
-#include "RenderTexture3D.h"
+#include "../pp/RenderTexture3D.h"
 
 using namespace cocos2d;
+using namespace pp;
 using namespace hm;
 
 ShadowCamera::~ShadowCamera()

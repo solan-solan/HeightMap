@@ -62,8 +62,11 @@ list(APPEND GAME_SOURCE
      Classes/hm/LodHM.cpp
      Classes/hm/HeightChunk.cpp
      Classes/hm/rjh.cpp
-     Classes/hm/RenderTexture3D.cpp
      Classes/hm/ShadowCamera.cpp
+     Classes/pp/FilterBase.cpp
+     Classes/pp/FilterDof.cpp
+     Classes/pp/RTSprite.cpp
+     Classes/pp/RenderTexture3D.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -73,8 +76,11 @@ list(APPEND GAME_HEADER
      Classes/hm/HeightChunk.h
      Classes/hm/CenterArray.h
      Classes/hm/rjh.h
-     Classes/hm/RenderTexture3D.h
      Classes/hm/ShadowCamera.h
+     Classes/pp/FilterBase.h
+     Classes/pp/FilterDof.h
+     Classes/pp/RTSprite.h
+     Classes/pp/RenderTexture3D.h
      )
 
 if(ANDROID)

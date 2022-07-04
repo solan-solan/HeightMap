@@ -5,7 +5,7 @@
 #include "renderer/backend/Device.h"
 
 using namespace cocos2d;
-using namespace hm;
+using namespace pp;
 
 RenderTexture3D::RenderTexture3D()
 {

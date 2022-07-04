@@ -2,9 +2,10 @@
 #include "HeightMap.h"
 #include "renderer/backend/Device.h"
 #include "ShadowCamera.h"
-#include "RenderTexture3D.h"
+#include "../pp/RenderTexture3D.h"
 
 using namespace hm;
+using namespace pp;
 using namespace cocos2d;
 
 const Vec3 LodHM::_lod_color[7] = {

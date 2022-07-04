@@ -2,9 +2,10 @@
 #include "rjh.h"
 #include "renderer/backend/Device.h"
 #include "ShadowCamera.h"
-#include "RenderTexture3D.h"
+#include "../pp/RenderTexture3D.h"
 
 using namespace hm;
+using namespace pp;
 using namespace cocos2d;
 
 #define NORMAL_SLOPE 4

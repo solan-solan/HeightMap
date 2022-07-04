@@ -24,6 +24,10 @@
 
 #include "HelloWorldScene.h"
 #include "hm/ShadowCamera.h"
+#include "pp/RTSprite.h"
+#include "pp/FilterBase.h"
+#include "pp/FilterDof.h"
+#include "pp/RenderTexture3D.h"
 
 USING_NS_CC;
 
@@ -36,6 +40,14 @@ USING_NS_CC;
 #define DEPTH_TEXT_SIZE_WORLD 2048.f
 #define SHADOW_CAM_DIST_LOCAL 2.f
 #define DEPTH_TEXT_SIZE_LOCAL 1024.f
+
+std::vector<pp::RTSprite*> _filters;
+
+HelloWorld::~HelloWorld()
+{
+    for (auto rt_spr : _filters)
+        rt_spr->release();
+}
 
 Scene* HelloWorld::createScene()
 {
@@ -92,15 +104,24 @@ bool HelloWorld::init()
 
     /////////////////////////////
     // 3. add your codes below...
+    setCameraMask((unsigned short)CameraFlag::USER1 | (unsigned short)CameraFlag::USER4);
 
     _visit[int(CameraFlag::USER1) >> 2] = &HelloWorld::visit_cmn;
     _visit[int(CameraFlag::USER2) >> 2] = &HelloWorld::visit_shadow_local;
     _visit[int(CameraFlag::USER3) >> 2] = &HelloWorld::visit_shadow_world;
+    _visit[int(CameraFlag::USER4) >> 2] = &HelloWorld::visit_pp;
 
-	Director::getInstance()->setClearColor(Color4F(FOG_COLOR_FROM.x, FOG_COLOR_FROM.y, FOG_COLOR_FROM.z, 1.f));
+    Director::getInstance()->setClearColor(Color4F(FOG_COLOR_FROM.x, FOG_COLOR_FROM.y, FOG_COLOR_FROM.z, 1.f));
+
+    const auto& sz = Director::getInstance()->getWinSize();
+
+    // Init default camera as ortho
+    _defaultCamera->initOrthographic(sz.width, sz.height, -1024.f, 1024.f);
+    _defaultCamera->setPosition3D(Vec3(0.f, 0.f, 0.f));
+    _defaultCamera->setRotation3D(Vec3(0.f, 0.f, 0.f));
+    _defaultCamera->setCameraFlag(CameraFlag::USER4);
 
     // Add 3d camera
-    const auto& sz = Director::getInstance()->getWinSize();
     _cam = Camera::createPerspective(60.f, sz.width / sz.height, 0.1f, 800.f);
     addChild(_cam);
     _cam->setCameraFlag(CameraFlag::USER1);
@@ -236,6 +257,30 @@ bool HelloWorld::init()
     listener->onTouchesMoved = CC_CALLBACK_2(HelloWorld::onTouchesMoved, this);
     listener->onTouchesEnded = CC_CALLBACK_2(HelloWorld::onTouchesEnd, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+
+    // Init pp filters
+    _filters.resize(2);
+
+    // Base filter (renders to screen as is)
+//    auto flt = new pp::FilterBase(sz, true);
+//    flt->init();
+//    _filters.at(0) = pp::RTSprite::create(flt, sz);
+//    _filters.at(0)->setCameraMask((unsigned short)CameraFlag::USER4);
+//    _filters.at(0)->retain();
+
+    // Dof filter
+    auto flt_1 = new pp::FilterDof(sz, Vec4(0.f, 2.f / sz.height, _cam->getNearPlane(), _cam->getFarPlane()), 8, true);
+    flt_1->setDepthCoeff(5.f);
+    _filters.at(0) = pp::RTSprite::create(flt_1, sz);
+    _filters.at(0)->setCameraMask((unsigned short)CameraFlag::USER4);
+    _filters.at(0)->retain();
+
+    auto flt_2 = new pp::FilterDof(sz, Vec4(2.f / sz.width, 0.f, _cam->getNearPlane(), _cam->getFarPlane()), 8, false);
+    flt_2->setDepthTexture(flt_1->getRenderTexture()->getDepthText());
+    flt_2->setDepthCoeff(5.f);
+    _filters.at(1) = pp::RTSprite::create(flt_2, sz);
+    _filters.at(1)->setCameraMask((unsigned short)CameraFlag::USER4);
+    _filters.at(1)->retain();
 
     // Start update to pass 'time passed' to the HeightMap (Its needed to animate the grass)
     scheduleUpdate();
@@ -386,6 +431,7 @@ void HelloWorld::addUi()
     //--- Grass
     auto* txt = ui::Text::create("grass", "arial", 32 * sc_fct);
     txt->setPosition(Vec2(sz.width - 200.f * sc_fct, sz.height / 2.f + 200.f * sc_fct));
+    txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
     auto* cb = ui::CheckBox::create("res/ui/check_box_normal.png",
@@ -396,11 +442,13 @@ void HelloWorld::addUi()
     cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f + 200.f * sc_fct));
     cb->addEventListener(CC_CALLBACK_2(HelloWorld::enableGrass, this));
     cb->setScale(3.f * sc_fct);
+    cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
 
     //--- Grid
     txt = ui::Text::create("grid", "arial", 32 * sc_fct);
     txt->setPosition(Vec2(sz.width - 200.f * sc_fct, sz.height / 2.f));
+    txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
     cb = ui::CheckBox::create("res/ui/check_box_normal.png",
@@ -411,11 +459,13 @@ void HelloWorld::addUi()
     cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f));
     cb->addEventListener(CC_CALLBACK_2(HelloWorld::showGrid, this));
     cb->setScale(3.f * sc_fct);
+    cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
 
     //--- Normal
     txt = ui::Text::create("normal", "arial", 32 * sc_fct);
     txt->setPosition(Vec2(sz.width - 200.f * sc_fct, sz.height / 2.f - 200.f * sc_fct));
+    txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
     cb = ui::CheckBox::create("res/ui/check_box_normal.png",
@@ -426,11 +476,13 @@ void HelloWorld::addUi()
     cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f - 200.f * sc_fct));
     cb->addEventListener(CC_CALLBACK_2(HelloWorld::showNormal, this));
     cb->setScale(3.f * sc_fct);
+    cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
 
     //--- Speed
     txt = ui::Text::create("speed", "arial", 32 * sc_fct);
     txt->setPosition(Vec2(sz.width / 2.f - 100.f * sc_fct, 50.f * sc_fct));
+    txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
     ui::Slider* sl = ui::Slider::create();
@@ -442,11 +494,13 @@ void HelloWorld::addUi()
     sl->setPosition(Vec2(sz.width / 2.f, 50.f * sc_fct));
     sl->addEventListener(CC_CALLBACK_2(HelloWorld::changeSpeed, this));
     sl->setScale(3.f * sc_fct);
+    sl->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(sl);
 
     //--- Sun
     txt = ui::Text::create("sun", "arial", 32 * sc_fct);
     txt->setPosition(Vec2(sz.width / 2.f - 100.f * sc_fct, sz.height - 50.f * sc_fct));
+    txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
     sl = ui::Slider::create();
@@ -458,6 +512,7 @@ void HelloWorld::addUi()
     sl->setPosition(Vec2(sz.width / 2.f, sz.height - 50.f * sc_fct));
     sl->addEventListener(CC_CALLBACK_2(HelloWorld::sunDir, this));
     sl->setScale(3.f * sc_fct);
+    sl->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(sl);
 }
 
@@ -591,6 +646,41 @@ void HelloWorld::visit(Renderer* renderer, const Mat4& parentTransform, uint32_t
     (this->*_visit[int(Camera::getVisitingCamera()->getCameraFlag()) >> 2])(renderer, parentTransform, parentFlags);
 }
 
+void HelloWorld::visit_pp(Renderer* renderer, const Mat4& parentTransform, uint32_t parentFlags)
+{
+    uint32_t flags = processParentFlags(parentTransform, parentFlags);
+
+    // IMPORTANT:
+    // To ease the migration to v3.0, we still support the Mat4 stack,
+    // but it is deprecated and your code should not rely on it
+    _director->pushMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
+    _director->loadMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW, _modelViewTransform);
+
+    if (_filters.size())
+    {
+        for (int i = 1; i < _filters.size(); ++i)
+        {
+            _filters[i]->begin();
+            _filters[i - 1]->visit(renderer, _modelViewTransform, flags);
+            _filters[i]->end();
+        }
+
+        // Draw last filtered sprite in stack on the screen
+        _filters[_filters.size() - 1]->visit(renderer, _modelViewTransform, flags);
+    }
+
+    // Draw ui (should be optimized)
+    for (auto it = _children.cbegin(), itCend = _children.cend(); it != itCend; ++it)
+        (*it)->visit(renderer, _modelViewTransform, flags);
+
+    _director->popMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
+
+    // FIX ME: Why need to set _orderOfArrival to 0??
+    // Please refer to https://github.com/cocos2d/cocos2d-x/pull/6920
+    // reset for next frame
+    // _orderOfArrival = 0;
+}
+
 void HelloWorld::visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& parentTransform, uint32_t parentFlags)
 {
     // quick return if not visible. children won't be drawn.
@@ -606,6 +696,9 @@ void HelloWorld::visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& par
     // but it is deprecated and your code should not rely on it
     _director->pushMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
     _director->loadMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW, _modelViewTransform);
+
+    // Draw 3d scene to texture
+    _filters[0]->begin();
 
     int i = 0;
     if (!_children.empty())
@@ -625,6 +718,8 @@ void HelloWorld::visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& par
         for (auto it = _children.cbegin() + i, itCend = _children.cend(); it != itCend; ++it)
             (*it)->visit(renderer, _modelViewTransform, flags);
     }
+
+    _filters[0]->end();
 
     _director->popMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
 
