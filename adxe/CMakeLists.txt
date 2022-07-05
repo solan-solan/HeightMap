@@ -1,8 +1,8 @@
 #/****************************************************************************
 # Copyright (c) 2013-2014 cocos2d-x.org
-# Copyright (c) 2015-2017 Chukong Technologies Inc.
+# Copyright (c) 2021-2022 Bytedance Inc.
 #
-# http://www.cocos2d-x.org
+# https://adxeproject.github.io
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,19 +30,37 @@ set(APP_NAME MyGame)
 project(${APP_NAME})
 
 if(NOT DEFINED BUILD_ENGINE_DONE) # to test HelloCpp into root project
+    if(XCODE)
+        set(CMAKE_XCODE_GENERATE_TOP_LEVEL_PROJECT_ONLY TRUE)
+    endif()
+    
+    # config quick starter batch script run.bat for windows
+    if(WIN32)
+        file(RELATIVE_PATH CMAKE_BUILD_RELATIVE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/run.bat.in" "${CMAKE_CURRENT_SOURCE_DIR}/run.bat" @ONLY)
+    endif()
+
     set(ADXE_ROOT "$ENV{ADXE_ROOT}")
 
     if(NOT (ADXE_ROOT STREQUAL ""))
         set(ADXE_ROOT_PATH "${ADXE_ROOT}")
-        file(TO_CMAKE_PATH ${ADXE_ROOT_PATH} ADXE_ROOT_PATH)  # string(REPLACE "\\" "/" ADXE_ROOT_PATH ${ADXE_ROOT_PATH})
+        file(TO_CMAKE_PATH ${ADXE_ROOT_PATH} ADXE_ROOT_PATH) # string(REPLACE "\\" "/" ADXE_ROOT_PATH ${ADXE_ROOT_PATH})
         message(STATUS "Using system env var ADXE_ROOT=${ADXE_ROOT}")
     else()
         message(FATAL_ERROR "Please run setup.py add system env var 'ADXE_ROOT' to specific the engine root")
     endif()
+
     set(CMAKE_MODULE_PATH ${ADXE_ROOT_PATH}/cmake/Modules/)
 
     include(CocosBuildSet)
-    add_subdirectory(${ADXE_ROOT_PATH}/cocos ${ENGINE_BINARY_PATH}/cocos/core)
+    set(_AX_USE_PREBUILT FALSE)
+    if (WIN32 AND DEFINED AX_PREBUILT_DIR AND IS_DIRECTORY ${ADXE_ROOT_PATH}/${AX_PREBUILT_DIR})
+        set(_AX_USE_PREBUILT TRUE)
+    endif()
+
+    if (NOT _AX_USE_PREBUILT)
+        add_subdirectory(${ADXE_ROOT_PATH}/core ${ENGINE_BINARY_PATH}/adxe/core)
+    endif()
 endif()
 
 # record sources, headers, resources...
@@ -73,6 +91,7 @@ list(APPEND GAME_HEADER
      Classes/hm/HeightChunk.h
      Classes/hm/CenterArray.h
      Classes/hm/rjh.h
+     Classes/hm/ccabi.h
      )
 
 if(ANDROID)
@@ -135,16 +154,19 @@ if(NOT ANDROID)
     add_executable(${APP_NAME} ${all_code_files})
 else()
     add_library(${APP_NAME} SHARED ${all_code_files})
-    add_subdirectory(${ADXE_ROOT_PATH}/cocos/platform/android ${ENGINE_BINARY_PATH}/cocos/platform)
+    # whole archive for jni
+    add_subdirectory(${ADXE_ROOT_PATH}/core/platform/android ${ENGINE_BINARY_PATH}/core/platform)
     target_link_libraries(${APP_NAME} -Wl,--whole-archive cpp_android_spec -Wl,--no-whole-archive)
-
     config_android_shared_libs("org.cocos2dx.lib" "${CMAKE_CURRENT_SOURCE_DIR}/proj.android/app/src")
 endif()
 
-target_link_libraries(${APP_NAME} ${ADXE_CORE_LIB})
+if (NOT _AX_USE_PREBUILT)
+    target_link_libraries(${APP_NAME} ${ADXE_CORE_LIB})
+endif()
+
 target_include_directories(${APP_NAME}
         PRIVATE Classes
-        PRIVATE ${ADXE_ROOT_PATH}/cocos/audio/include/
+        PRIVATE ${ADXE_ROOT_PATH}/core/audio
 )
 
 # mark app resources
@@ -152,6 +174,7 @@ setup_cocos_app_config(${APP_NAME})
 if(APPLE)
     set_target_properties(${APP_NAME} PROPERTIES RESOURCE "${APP_UI_RES}")
     set_xcode_property(${APP_NAME} INSTALL_PATH "\$(LOCAL_APPS_DIR)")
+    set_xcode_property(${APP_NAME} PRODUCT_BUNDLE_IDENTIFIER "org.adxe.mygame")
 
     if(MACOSX)
         set_target_properties(${APP_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/proj.ios_mac/mac/Info.plist")
@@ -163,10 +186,31 @@ if(APPLE)
     # For code-signing, set the DEVELOPMENT_TEAM:
     #set_xcode_property(${APP_NAME} DEVELOPMENT_TEAM "GRLXXXX2K9")
 elseif(WINDOWS)
-    cocos_copy_target_dll(${APP_NAME})
+    if(NOT _AX_USE_PREBUILT)
+        cocos_copy_target_dll(${APP_NAME})
+    endif()
 endif()
 
-if(LINUX OR WINDOWS)
+if((WINDOWS AND (CMAKE_GENERATOR STREQUAL "Ninja")) OR LINUX)
     cocos_get_resource_path(APP_RES_DIR ${APP_NAME})
     cocos_copy_target_res(${APP_NAME} LINK_TO ${APP_RES_DIR} FOLDERS ${GAME_RES_FOLDER})
+elseif(WINDOWS)
+    set_property(TARGET ${APP_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${GAME_RES_FOLDER}")
+    if(NOT DEFINED BUILD_ENGINE_DONE)
+        set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${APP_NAME})
+    endif()
+endif()
+
+# The optional thirdparties(not dependent by engine)
+if (AX_WITH_YAML_CPP)
+    target_include_directories(${APP_NAME} PRIVATE ${ADXE_ROOT_PATH}/thirdparty/yaml-cpp/include)
+    target_link_libraries(${APP_NAME} yaml-cpp)
+endif()
+
+if (_AX_USE_PREBUILT) # support windows only
+    include(${ADXE_ROOT_PATH}/cmake/Modules/CocosConfigDefine.cmake)
+    use_cocos2dx_compile_define(${APP_NAME})
+
+    include(${ADXE_ROOT_PATH}/cmake/Modules/AdxeLinkHelpers.cmake)
+    adxe_link_cxx_prebuilt(${APP_NAME} ${ADXE_ROOT_PATH} ${AX_PREBUILT_DIR})
 endif()
