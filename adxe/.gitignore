@@ -6,3 +6,4 @@ win64_build19/
 *.tlog
 *.lastbuildstate
 *.ipch
+/build*
