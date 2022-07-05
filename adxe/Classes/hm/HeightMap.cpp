@@ -499,7 +499,7 @@ void HeightMap::loadTextures()
 				Image* img = new Image();
 				img->initWithImageData(data.getBytes(), data.getSize());
 				_layerData[i]._text[j].diff = new Texture2D();
-				_layerData[i]._text[j].diff->initWithImage(img, backend::PixelFormat::RGB888);
+				_layerData[i]._text[j].diff->initWithImage(img, backend::PixelFormat::RGB8);
 				_layerData[i]._text[j].diff->setTexParameters(texPar);
 				_layerData[i]._text[j].diff->generateMipmap();
 
@@ -513,7 +513,7 @@ void HeightMap::loadTextures()
 					Image* img = new Image();
 					img->initWithImageData(data.getBytes(), data.getSize());
 					_layerData[i]._text[j].norm = new Texture2D();
-					_layerData[i]._text[j].norm->initWithImage(img, backend::PixelFormat::RGB888);
+					_layerData[i]._text[j].norm->initWithImage(img, backend::PixelFormat::RGB8);
 					_layerData[i]._text[j].norm->setTexParameters(texPar);
 					_layerData[i]._text[j].norm->generateMipmap();
 
@@ -661,7 +661,7 @@ void HeightMap::setGrassText(const std::string& grass_text)
 		Image* img = new Image();
 		img->initWithImageFile(grass_text);
 		_grassText = new Texture2D();
-		_grassText->initWithImage(img, backend::PixelFormat::RGBA8888);
+		_grassText->initWithImage(img, backend::PixelFormat::RGBA8);
 		_grassText->setTexParameters(texPar);
 		_grassText->generateMipmap();
 		delete img;

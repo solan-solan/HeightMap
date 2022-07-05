@@ -9,15 +9,17 @@ android {
     compileSdkVersion PROP_COMPILE_SDK_VERSION.toInteger()
 
     // setup ndk
-//    def ndkInfo = adxetools.findNDK("19.2.5345600+")
-    def ndkInfo = adxetools.findNDK("22.1.7171670+")
+    def ndkInfo = adxetools.findNDK()
     ndkVersion = ndkInfo[0]
     if(ndkInfo[1]) {
         ndkPath = ndkInfo[1]
     }
 
+    // setup cmake
+    def cmakeVer = adxetools.findCMake("3.10.2+", project.rootProject)
+
     defaultConfig {
-        applicationId "org.cocos2dx.mygame"
+        applicationId "org.cocos2dx.hellocpp"
         minSdkVersion PROP_MIN_SDK_VERSION
         targetSdkVersion PROP_TARGET_SDK_VERSION
         versionCode 1
@@ -25,7 +27,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments "-DCMAKE_FIND_ROOT_PATH=", "-DANDROID_STL=c++_static", "-DANDROID_TOOLCHAIN=clang", "-DANDROID_ARM_NEON=TRUE"
+                arguments "-DCMAKE_FIND_ROOT_PATH=", "-DANDROID_STL=c++_shared", "-DANDROID_TOOLCHAIN=clang", "-DANDROID_ARM_NEON=TRUE"
                 cppFlags "-frtti -fexceptions -fsigned-char"
             }
         }
@@ -45,7 +47,7 @@ android {
 
     externalNativeBuild {
         cmake {
-            version "3.14.3"
+            version "$cmakeVer"
             path "../../CMakeLists.txt"
         }
     }
@@ -80,6 +82,10 @@ android {
             jniDebuggable true
             renderscriptDebuggable true
         }
+    }
+
+    aaptOptions {
+       noCompress 'mp3','ogg','wav','mp4','ttf','ttc'
     }
 }
 
