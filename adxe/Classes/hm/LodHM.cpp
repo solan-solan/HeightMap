@@ -272,8 +272,6 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 		--_force_level_update;
 	}
 
-	float center_x_grass = 0.f;
-	float center_z_grass = 0.f;
 	if (!_next)
 	{
 		int j_cur_chunk, i_cur_chunk;
@@ -284,21 +282,23 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 		// Adjust grass center (It is needed for smooth grass appear)
 		if (_hM->_programState)
 		{
-			center_x_grass = _hM->_pos.x - std::fmod(_hM->_pos.x, _hM->_prop._scale.x);
-			if (center_x_grass == center_x)
-				center_x_grass += _hM->_prop._scale.x * 2.f;
+			_center_x_grass = _hM->_pos.x - std::fmod(_hM->_pos.x, _hM->_prop._scale.x);
+			if (_center_x_grass == center_x)
+				_center_x_grass += _hM->_prop._scale.x * 2.f;
 			else
-				center_x_grass = center_x;
-			center_z_grass = _hM->_pos.z - std::fmod(_hM->_pos.z, _hM->_prop._scale.z);
-			if (center_z_grass == center_z)
-				center_z_grass += _hM->_prop._scale.z * 2.f;
+				_center_x_grass = center_x;
+			_center_z_grass = _hM->_pos.z - std::fmod(_hM->_pos.z, _hM->_prop._scale.z);
+			if (_center_z_grass == center_z)
+				_center_z_grass += _hM->_prop._scale.z * 2.f;
 			else
-				center_z_grass = center_z;
+				_center_z_grass = center_z;
 		}
 	}
 
+	_start_x = start_x;
+	_start_z = start_z;
+
 	// Update vertex datas
-	int grass_mdl_cnt = 0;
 	unsigned int iArr = 0;
 
 	int jjj = 0;
@@ -412,92 +412,12 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 
 			OneChunk::ONE_HEIGHT::NORMAL ret_n;
 			_hM->getNormalForVertex(xp, zp, 1.f, &ret_n);
-			
+
 			int pack_norm = ((ret_n.x << 16) & 0xff0000) | ((ret_n.y << 8) & 0xff00) | (ret_n.z & 0xff);
 			lVert[iArr].npack = float(pack_norm);
 
 			for (int q = 0; q < _layer_count; ++q)
 				lVert[iArr].alpha[q] = float(one.lay[q].alpha);
-
-			// Update grass data for the first Lod
-			// Adjust grass center
-			if (_hM->_programState && !_next)
-			{
-				int lay_num = 0, text_num = -1;
-				for (int q = _layer_count - 1; q >= 0; --q)
-				{
-					lay_num = q;
-					unsigned char* alpha = (unsigned char*)(&(one.lay[q].alpha));
-					for (int f = LAYER_TEXTURE_SIZE - 1; f >= 0; --f)
-						if (alpha[f] == 0xff)
-						{
-							text_num = f;
-							q = -1;
-							break;
-						}
-				}
-
-				// If grass exists for the texture
-				if (text_num > -1 && _hM->_prop._layers.at(lay_num)._text.at(text_num).grass.patches.size())
-				{
-					float x_grass_coeff = std::abs(center_x_grass - xp) / _hM->_prop._scale.x;
-					float z_grass_coeff = std::abs(center_z_grass - zp) / _hM->_prop._scale.z;
-					if (x_grass_coeff <= _hM->_grass_prop._tile_count_coef && z_grass_coeff <= _hM->_grass_prop._tile_count_coef)
-					{
-						auto& grass_data = _hM->_prop._layers.at(lay_num)._text.at(text_num).grass;
-						int rate = grass_data.rate;
-						int idx_text = grass_data.idx;
-						std::srand((i + 1) * (i + 1) * (j + 1) * (j + 1));
-						
-						for (int l = 0; l < rate; ++l)
-						{
-							float chance_patch = rand_0_1();
-							float size_patch = 0.f;
-							int num_patch = 0;
-							for (auto& patch : grass_data.patches)
-							{
-								if (patch.chance >= chance_patch)
-								{
-									size_patch = MathUtil::lerp(patch.size_min, patch.size_max, rand_0_1());
-									break;
-								}
-								num_patch++;
-							}
-
-							if (size_patch > 0.f)
-							{
-								unsigned int idx = grass_mdl_cnt;
-
-								float rnd = rand_minus1_1();
-								float xr = _hM->_grass_prop._shift * rnd;
-								if (i == 0)
-									xr = rnd * 0.5;
-								if (i == _hM->_prop._width - 1.0)
-									xr = rnd * 0.5 * -1.0;
-
-								rnd = rand_minus1_1();
-								float yr = _hM->_grass_prop._shift * rnd;
-								if (i == 0)
-									yr = rnd * 0.5;
-								if (i == _hM->_prop._height - 1.0)
-									yr = rnd * 0.5 * -1.0;
-
-								float x_sh = xp + xr;
-								float z_sh = zp + yr;
-								Vec3 n;
-								float y = _hM->getHeight(x_sh, z_sh, &n) / _hM->_prop._scale.y;
-								_hM->_gVert[idx].vert[0].i = xp; _hM->_gVert[idx].vert[0].j = zp; _hM->_gVert[idx].vert[0].y = y; _hM->_gVert[idx].vert[0].ratex = xr; _hM->_gVert[idx].vert[0].ratey = yr; _hM->_gVert[idx].vert[0].text_idx = idx_text; _hM->_gVert[idx].vert[0].size = size_patch; _hM->_gVert[idx].vert[0].patch_num = num_patch;
-								_hM->_gVert[idx].vert[1].i = xp; _hM->_gVert[idx].vert[1].j = zp; _hM->_gVert[idx].vert[1].y = y; _hM->_gVert[idx].vert[1].ratex = xr; _hM->_gVert[idx].vert[1].ratey = yr; _hM->_gVert[idx].vert[1].text_idx = idx_text; _hM->_gVert[idx].vert[1].size = size_patch; _hM->_gVert[idx].vert[1].patch_num = num_patch;
-								_hM->_gVert[idx].vert[2].i = xp; _hM->_gVert[idx].vert[2].j = zp; _hM->_gVert[idx].vert[2].y = y; _hM->_gVert[idx].vert[2].ratex = xr; _hM->_gVert[idx].vert[2].ratey = yr; _hM->_gVert[idx].vert[2].text_idx = idx_text; _hM->_gVert[idx].vert[2].size = size_patch; _hM->_gVert[idx].vert[2].patch_num = num_patch;
-								_hM->_gVert[idx].vert[3].i = xp; _hM->_gVert[idx].vert[3].j = zp; _hM->_gVert[idx].vert[3].y = y; _hM->_gVert[idx].vert[3].ratex = xr; _hM->_gVert[idx].vert[3].ratey = yr; _hM->_gVert[idx].vert[3].text_idx = idx_text; _hM->_gVert[idx].vert[3].size = size_patch; _hM->_gVert[idx].vert[3].patch_num = num_patch;
-							
-								grass_mdl_cnt++;
-							}
-						}
-					}
-				}
-				_hM->_grass_gl._mdl_cnt = grass_mdl_cnt;
-			}
 		}
 	}
 
@@ -505,6 +425,131 @@ LodHM::NOT_DRAW LodHM::updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_m
 
 	// Return the current drawn square
 	return n_draw;
+}
+
+void LodHM::updateGrassVertexArray()
+{
+	assert(_hM->_programState);
+
+	// If previouse buffer was not updated yet
+	if (_hM->_grass_state != NONE)
+		return;
+
+	if (Vec2(_center_x_grass, _center_z_grass) == Vec2(_center_x_grass_old, _center_z_grass_old) && !_force_level_update)
+		return;
+
+	_center_x_grass_old = _center_x_grass;
+	_center_z_grass_old = _center_z_grass;
+	float start_x = _start_x;
+	float start_z = _start_z;
+	float center_x_grass = _center_x_grass_old;
+	float center_z_grass = _center_z_grass_old;
+
+	// Width and Height according to the Level number
+	auto hLev = (_h - 1) * levelMult();
+	auto wLev = (_w - 1) * levelMult();
+
+	// Update vertex datas
+	int grass_mdl_cnt = 0;
+	unsigned int iArr = 0;
+
+	int jjj = 0;
+	for (float zp = start_z; jjj < _h; zp += levelMult() * _hM->_prop._scale.z, ++jjj) // For each string
+	{
+		int iii = 0;
+		for (float xp = start_x; iii < _w; xp += levelMult() * _hM->_prop._scale.x, ++iii) // For each column
+		{
+			iArr = iii + jjj * _w;
+
+			int j_world_num;
+			float norm_z = _hM->getZtoNorm(zp, &j_world_num);
+			int j = _hM->zToJ(norm_z);
+
+			int i_world_num;
+			float norm_x = _hM->getXtoNorm(xp, &i_world_num);
+			int i = _hM->xToI(norm_x);
+
+			auto& one = _hM->HEIGHT(i_world_num, j_world_num, i, j);
+
+			// Update grass data for the first Lod
+			int lay_num = 0, text_num = -1;
+			for (int q = _layer_count - 1; q >= 0; --q)
+			{
+				lay_num = q;
+				unsigned char* alpha = (unsigned char*)(&(one.lay[q].alpha));
+				for (int f = LAYER_TEXTURE_SIZE - 1; f >= 0; --f)
+					if (alpha[f] == 0xff)
+					{
+						text_num = f;
+						q = -1;
+						break;
+					}
+			}
+
+			// If grass exists for the texture
+			if (text_num > -1 && _hM->_prop._layers.at(lay_num)._text.at(text_num).grass.patches.size())
+			{
+				float x_grass_coeff = std::abs(center_x_grass - xp) / _hM->_prop._scale.x;
+				float z_grass_coeff = std::abs(center_z_grass - zp) / _hM->_prop._scale.z;
+				if (x_grass_coeff <= _hM->_grass_prop._tile_count_coef && z_grass_coeff <= _hM->_grass_prop._tile_count_coef)
+				{
+					auto& grass_data = _hM->_prop._layers.at(lay_num)._text.at(text_num).grass;
+					int rate = grass_data.rate;
+					int idx_text = grass_data.idx;
+					std::srand((i + 1) * (i + 1) * (j + 1) * (j + 1));
+
+					for (int l = 0; l < rate; ++l)
+					{
+						float chance_patch = rand_0_1();
+						float size_patch = 0.f;
+						int num_patch = 0;
+						for (auto& patch : grass_data.patches)
+						{
+							if (patch.chance >= chance_patch)
+							{
+								size_patch = MathUtil::lerp(patch.size_min, patch.size_max, rand_0_1());
+								break;
+							}
+							num_patch++;
+						}
+
+						if (size_patch > 0.f)
+						{
+							unsigned int idx = grass_mdl_cnt;
+
+							float rnd = rand_minus1_1();
+							float xr = _hM->_grass_prop._shift * rnd;
+							if (i == 0)
+								xr = rnd * 0.5;
+							if (i == _hM->_prop._width - 1.0)
+								xr = rnd * 0.5 * -1.0;
+
+							rnd = rand_minus1_1();
+							float yr = _hM->_grass_prop._shift * rnd;
+							if (i == 0)
+								yr = rnd * 0.5;
+							if (i == _hM->_prop._height - 1.0)
+								yr = rnd * 0.5 * -1.0;
+
+							float x_sh = xp + xr;
+							float z_sh = zp + yr;
+							Vec3 n;
+							float y = _hM->getHeight(x_sh, z_sh, &n) / _hM->_prop._scale.y;
+							_hM->_gVert[idx].vert[0].i = xp; _hM->_gVert[idx].vert[0].j = zp; _hM->_gVert[idx].vert[0].y = y; _hM->_gVert[idx].vert[0].ratex = xr; _hM->_gVert[idx].vert[0].ratey = yr; _hM->_gVert[idx].vert[0].text_idx = idx_text; _hM->_gVert[idx].vert[0].size = size_patch; _hM->_gVert[idx].vert[0].patch_num = num_patch;
+							_hM->_gVert[idx].vert[1].i = xp; _hM->_gVert[idx].vert[1].j = zp; _hM->_gVert[idx].vert[1].y = y; _hM->_gVert[idx].vert[1].ratex = xr; _hM->_gVert[idx].vert[1].ratey = yr; _hM->_gVert[idx].vert[1].text_idx = idx_text; _hM->_gVert[idx].vert[1].size = size_patch; _hM->_gVert[idx].vert[1].patch_num = num_patch;
+							_hM->_gVert[idx].vert[2].i = xp; _hM->_gVert[idx].vert[2].j = zp; _hM->_gVert[idx].vert[2].y = y; _hM->_gVert[idx].vert[2].ratex = xr; _hM->_gVert[idx].vert[2].ratey = yr; _hM->_gVert[idx].vert[2].text_idx = idx_text; _hM->_gVert[idx].vert[2].size = size_patch; _hM->_gVert[idx].vert[2].patch_num = num_patch;
+							_hM->_gVert[idx].vert[3].i = xp; _hM->_gVert[idx].vert[3].j = zp; _hM->_gVert[idx].vert[3].y = y; _hM->_gVert[idx].vert[3].ratex = xr; _hM->_gVert[idx].vert[3].ratey = yr; _hM->_gVert[idx].vert[3].text_idx = idx_text; _hM->_gVert[idx].vert[3].size = size_patch; _hM->_gVert[idx].vert[3].patch_num = num_patch;
+
+							grass_mdl_cnt++;
+						}
+					}
+				}
+			}
+			_hM->_grass_gl._mdl_cnt = grass_mdl_cnt;
+		}
+	}
+
+	_hM->_grass_state = UPDATE_GL_BUFFER;
 }
 
 void LodHM::drawLandScapeShadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags)
@@ -842,6 +887,7 @@ void LodHM::createShader()
 		def += "#define MULTI_LAYER\n";
 
 	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	program->autorelease();
 	_layer_draw.at(0)._programState = new backend::ProgramState(program);
 
 	auto layout = _layer_draw.at(0)._programState->getVertexLayout();
@@ -1050,6 +1096,7 @@ void LodHM::createShaderGrid()
 		def += "#define FIRST_LOD\n";
 
 	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	program->autorelease();
 	_programStateGrid = new backend::ProgramState(program);
 
 	auto & pipelineDescriptor = _customCommandGrid.getPipelineDescriptor();
@@ -1114,6 +1161,7 @@ void LodHM::createShaderNorm()
 		def += "#define FIRST_LOD\n";
 
 	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	program->autorelease();
 	_programStateNorm = new backend::ProgramState(program);
 
 	auto& pipelineDescriptor = _customCommandNorm.getPipelineDescriptor();
@@ -1180,6 +1228,7 @@ void LodHM::createShadowShader()
 		def += "#define FIRST_LOD\n";
 
 	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	program->autorelease();
 	_programStateShadow = new backend::ProgramState(program);
 
 	auto layout = _programStateShadow->getVertexLayout();

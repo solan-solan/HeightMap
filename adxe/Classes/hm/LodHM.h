@@ -187,6 +187,12 @@ namespace hm
 
 		// The number of levels which must be updated forcibly - despite to change camera position or not
 		static std::atomic_char _force_level_update;
+		float _center_x_grass = 0.f;
+		float _center_z_grass = 0.f;
+		float _center_x_grass_old = 0.f;
+		float _center_z_grass_old = 0.f;
+		float _start_x = 0.f;
+		float _start_z = 0.f;
 
 		// Helper varriable for increase performance
 		struct HELPER
@@ -266,6 +272,7 @@ namespace hm
 
 		// Update vertex array
 		NOT_DRAW updateVertexArray(const cocos2d::Vec3 & p, int prev_lev_mult);
+		void updateGrassVertexArray();
 
 		// Draw landscape 
 		void drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & transform, uint32_t flags);
@@ -296,7 +303,7 @@ namespace hm
 		}
 
 		// Get first lod
-		const LodHM* getFirstLod() const { if (_next) return _next->getFirstLod(); else return this; }
+		LodHM* getFirstLod() { if (_next) return _next->getFirstLod(); else return this; }
 
 		// Update sky light direction
 		void updateSkyLightData();

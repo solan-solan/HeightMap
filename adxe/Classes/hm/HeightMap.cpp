@@ -40,7 +40,7 @@ HeightMap* HeightMap::create(const std::string& prop_file, const std::vector<Sha
 HeightMap::~HeightMap()
 {
 	// Stop thread
-	stopUpdThread();
+	stopGrassUpdThread();
 
 	unloadTextures();
 
@@ -201,13 +201,16 @@ void HeightMap::CreateLodLevels()
 
 void HeightMap::updatePositionView(const cocos2d::Vec3& p)
 {
+	// Update position
+	_pos = Vec3(p.x * _is_need_update.x, p.y * _is_need_update.y, p.z * _is_need_update.z);
+
+	// Update height gl buffers
+	_lods->updateGLbuffer();
+
 	if (_mutex.try_lock())
 	{
-		// Update position
-		_pos = Vec3(p.x * _is_need_update.x, p.y * _is_need_update.y, p.z * _is_need_update.z);
-
-		// Update GL buffers
-		updateLodsGl();
+		// Update grass GL buffers
+		updateGrassGl();
 
 		_mutex.unlock();
 	}
@@ -223,10 +226,15 @@ void HeightMap::updateHeightMap()
 	_lods->updateVertexArray(_pos, _lods->levelMult());
 }
 
-void HeightMap::updateLodsGl()
+void HeightMap::updateGrass()
 {
-	// Update grass GL buffers if first lod was updated and grass should be rendered
-	if (((_lods->updateGLbuffer() >> 1) & 1) * bool(_programState))
+	_fLod->updateGrassVertexArray();
+}
+
+void HeightMap::updateGrassGl()
+{
+	// Update grass GL buffers
+	if (_programState)
 		updateGrassGLbuffer();
 }
 
@@ -479,11 +487,6 @@ void HeightMap::draw_shadow(cocos2d::Renderer* renderer, const cocos2d::Mat4& tr
 	_lods->drawLandScapeShadow(renderer, transform, flags);
 }
 
-void HeightMap::updateHeights(const cocos2d::Vec3& p)
-{
-	updatePositionView(p);
-}
-
 void HeightMap::unloadTextures()
 {
 	if (_text_loaded)
@@ -585,6 +588,7 @@ void HeightMap::createGrassShader()
 		def += StringUtils::format("#define SHADOW\n#define DEPTH_TEXT_COUNT %i\n", _shdw.size());
 
 	auto program = backend::Device::getInstance()->newProgram(def + vert_sh, def + fr_sh);
+	program->autorelease();
 	_programState = new backend::ProgramState(program);
 
 	for (int i = 0; i < _grass_gl._dd.size(); ++i)
@@ -916,6 +920,9 @@ void HeightMap::disableGrass()
 
 void HeightMap::updateGrassGLbuffer()
 {
+	if (_grass_state == LodHM::LOD_STATE::NONE)
+		return;
+
 	_grass_gl._draw_mdl_cnt = _grass_gl._mdl_cnt;
 	for (int i = 0; i < _grass_gl._dd.size(); ++i)
 	{
@@ -929,6 +936,8 @@ void HeightMap::updateGrassGLbuffer()
 		if (sz_draw > 0)
 			_grass_gl._dd.at(i)._customCommand.updateVertexBuffer(_gVert.data() + delta, 0, sz_draw * sizeof(GRASS_MODEL));
 	}
+
+	_grass_state = LodHM::LOD_STATE::NONE;
 }
 
 const OneChunk::ONE_HEIGHT& HeightMap::getTileData(float x_w, float z_w, std::pair<unsigned short, unsigned short>& _loc_idx)
@@ -1007,7 +1016,7 @@ void HeightMap::addChunk(int j_chunk, int i_chunk, int chunk_count_w, int chunk_
 	}
 }
 
-void HeightMap::launchUpdThread()
+void HeightMap::launchGrassUpdThread()
 {
 	_thr_var = true;
 	_thr_upd = std::thread([this]() {
@@ -1015,14 +1024,15 @@ void HeightMap::launchUpdThread()
 		{
 			if (_mutex.try_lock())
 			{
-				updateHeightMap();
+				updateGrass();
 				_mutex.unlock();
 			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		}
 	});
 }
 
-void HeightMap::stopUpdThread()
+void HeightMap::stopGrassUpdThread()
 {
 	if (_thr_upd.joinable())
 	{

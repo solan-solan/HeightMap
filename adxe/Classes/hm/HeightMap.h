@@ -93,6 +93,8 @@ namespace hm
 
 		std::string _prop_file;
 
+		std::atomic_int _grass_state = { LodHM::LOD_STATE::NONE };
+
 	public:
 
 		// Height Map property
@@ -275,7 +277,7 @@ namespace hm
 		LodHM* _lods = 0;
 
 		// The first lod object
-		const LodHM* _fLod = 0;
+		LodHM* _fLod = 0;
 
 		// Mutex for safe variable access
 		std::mutex _mutex;
@@ -491,26 +493,18 @@ namespace hm
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		}
 
-		void forceUpdateHeightMap(const cocos2d::Vec3& pos)
-		{
-			updateHeightMap();
-			updateHeights(pos);
-		}
-
 		// Thread safe: Update pos value
 		void updatePositionView(const cocos2d::Vec3& p);
 
 		// Thread safe: Update verticies data regarding to the _pos value
 		void updateHeightMap();
+		void updateGrass();
 
 		// Returns scale of the HeightMap
 		const cocos2d::Vec3& getScales() const
 		{
 			return _prop._scale;
 		}
-
-		// Update heights relate to the 'p'
-		void updateHeights(const cocos2d::Vec3& p);
 
 		// draw object
 		virtual void draw(cocos2d::Renderer* renderer, const cocos2d::Mat4& transform, uint32_t flags) override;
@@ -564,10 +558,10 @@ namespace hm
 		void loadHeightsFromFile_(const std::string& path, const std::vector<std::string>& layer_text);
 
 		// Launch update thread
-		void launchUpdThread();
+		void launchGrassUpdThread();
 
 		// Stop update thread
-		void stopUpdThread();
+		void stopGrassUpdThread();
 
 		// Load Textures
 		void loadTextures();
@@ -637,8 +631,8 @@ namespace hm
 		// Create Lod levels
 		void CreateLodLevels();
 
-		// Update GL buffers for lod
-		void updateLodsGl();
+		// Update grass GL buffers for lod
+		void updateGrassGl();
 
 		// Calculate vector
 		cocos2d::Vec3 getVector(int i1, int j1, int i2, int j2) const;

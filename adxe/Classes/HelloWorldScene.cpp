@@ -243,10 +243,6 @@ bool HelloWorld::init()
     _player->setPositionY(_height_map->getHeight(_player->getPositionX(), _player->getPositionZ(), &n));
     setCameraBehind(true);
 
-    // Launch HeightMap updating
-    _height_map->forceUpdateHeightMap(Vec3(_player->getPositionX(), 0.f, _player->getPositionZ()));
-    _height_map->launchUpdThread();
-
     // Set skybox
     TextureCube* textureCube = TextureCube::create("res/skybox/left.jpg", "res/skybox/right.jpg",
         "res/skybox/top.jpg", "res/skybox/bottom.jpg",
@@ -437,6 +433,7 @@ void HelloWorld::update(float time)
     _time_passed += time;
     _height_map->setTimePassed(_time_passed);
     _height_map->updatePositionView(_player->getPosition3D());
+    _height_map->updateHeightMap();
 }
 
 void HelloWorld::addUi()
@@ -538,10 +535,12 @@ void HelloWorld::enableGrass(cocos2d::Ref* sender, cocos2d::ui::CheckBox::EventT
     {
     case ui::CheckBox::EventType::SELECTED:
         _height_map->enableGrass();
+        _height_map->launchGrassUpdThread();
         _height_map->forceUpdateHeightMap(_height_map->getProperty()._lod_count);
         break;
 
     case ui::CheckBox::EventType::UNSELECTED:
+        _height_map->stopGrassUpdThread();
         _height_map->disableGrass();
         break;
 
