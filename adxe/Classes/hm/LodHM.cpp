@@ -65,7 +65,7 @@ LodHM::LodHM(HeightMap* hM, int lod_count)
 	createVertexArray();
 
 	// Create buffers for the drawing landscape as wire only for debug
-#if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
+#if defined(_AX_DEBUG) && (_AX_DEBUG > 0)
 	createLineBuffers();
 	createNormBuffers();
 #endif
@@ -77,7 +77,7 @@ LodHM::LodHM(HeightMap* hM, int lod_count)
 	if (_shdw_data.self)
 	    createShadowShader();
 
-#if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
+#if defined(_AX_DEBUG) && (_AX_DEBUG > 0)
 	// Create grid shader for this
 	createShaderGrid();
 	createShaderNorm();
@@ -129,7 +129,7 @@ unsigned char LodHM::updateGLbuffer()
 
 	_layer_draw.at(0)._customCommand.updateVertexBuffer(lVert.data(), 0, lVert.size() * sizeof(ONEVERTEX));
 
-#if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
+#if defined(_AX_DEBUG) && (_AX_DEBUG > 0)
 	if (_show_grid)
 	{
 		if (_lod_num > 1)
@@ -199,8 +199,8 @@ void LodHM::createVertexArray()
 
 	_layer_draw.at(0)._customCommand.setTransparent(false);
 	_layer_draw.at(0)._customCommand.set3D(true);
-	_layer_draw.at(0)._customCommand.setBeforeCallback(CC_CALLBACK_0(LodHM::onBeforeDraw, this));
-	_layer_draw.at(0)._customCommand.setAfterCallback(CC_CALLBACK_0(LodHM::onAfterDraw, this));
+	_layer_draw.at(0)._customCommand.setBeforeCallback(AX_CALLBACK_0(LodHM::onBeforeDraw, this));
+	_layer_draw.at(0)._customCommand.setAfterCallback(AX_CALLBACK_0(LodHM::onAfterDraw, this));
 
 	// Set blending
 	auto& blend = _layer_draw.at(0)._customCommand.getPipelineDescriptor().blendDescriptor;
@@ -216,8 +216,8 @@ void LodHM::createVertexArray()
 		_layer_draw.at(i)._customCommand.setIndexDrawInfo(0, _layer_draw.at(0)._customCommand.getIndexDrawCount());
 		_layer_draw.at(i)._customCommand.setTransparent(false);
 		_layer_draw.at(i)._customCommand.set3D(true);
-		_layer_draw.at(i)._customCommand.setBeforeCallback(CC_CALLBACK_0(LodHM::onBeforeDraw, this));
-		_layer_draw.at(i)._customCommand.setAfterCallback(CC_CALLBACK_0(LodHM::onAfterDraw, this));
+		_layer_draw.at(i)._customCommand.setBeforeCallback(AX_CALLBACK_0(LodHM::onBeforeDraw, this));
+		_layer_draw.at(i)._customCommand.setAfterCallback(AX_CALLBACK_0(LodHM::onAfterDraw, this));
 
 		// Set blending
 		auto& blend = _layer_draw.at(i)._customCommand.getPipelineDescriptor().blendDescriptor;
@@ -616,7 +616,7 @@ void LodHM::drawLandScape(cocos2d::Renderer * renderer, const cocos2d::Mat4 & tr
 		}
 	}
 
-#if defined(COCOS2D_DEBUG) && (COCOS2D_DEBUG > 0)
+#if defined(_AX_DEBUG) && (_AX_DEBUG > 0)
     if (_show_grid)
 	{
 		_customCommandGrid.init(0.f);
@@ -890,41 +890,39 @@ void LodHM::createShader()
 	program->autorelease();
 	_layer_draw.at(0)._programState = new backend::ProgramState(program);
 
-	auto layout = _layer_draw.at(0)._programState->getVertexLayout();
-
 	const auto & attributeInfo = _layer_draw.at(0)._programState->getProgram()->getActiveAttributes();
 
 	const auto & iter1 = attributeInfo.find("a_height");
 	if (iter1 != attributeInfo.end())
-		layout->setAttribute("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
 
 	const auto & iter2 = attributeInfo.find("a_npack");
 	if (iter2 != attributeInfo.end())
-		layout->setAttribute("a_npack", iter2->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, npack), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_npack", iter2->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, npack), false);
 
 	const auto & iter3 = attributeInfo.find("a_alpha");
 	if (iter3 != attributeInfo.end())
 	{
 		#if MAX_LAYER_COUNT == 1
-		    layout->setAttribute("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, alpha), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, alpha), false);
         #elif MAX_LAYER_COUNT == 2
-		    layout->setAttribute("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT2, offsetof(ONEVERTEX, alpha), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT2, offsetof(ONEVERTEX, alpha), false);
         #elif MAX_LAYER_COUNT == 3
-		    layout->setAttribute("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT3, offsetof(ONEVERTEX, alpha), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT3, offsetof(ONEVERTEX, alpha), false);
         #elif MAX_LAYER_COUNT == 4
-		    layout->setAttribute("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT3, offsetof(ONEVERTEX, alpha), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_alpha", iter3->second.location, backend::VertexFormat::FLOAT3, offsetof(ONEVERTEX, alpha), false);
         #endif
 	}
 
 	const auto & iter5 = attributeInfo.find("a_vertex_x");
 	if (iter5 != attributeInfo.end())
-		layout->setAttribute("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
 
 	const auto & iter6 = attributeInfo.find("a_vertex_z");
 	if (iter6 != attributeInfo.end())
-		layout->setAttribute("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
+		_layer_draw.at(0)._programState->setVertexAttrib("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
 
-	layout->setLayout(sizeof(ONEVERTEX));
+	_layer_draw.at(0)._programState->setVertexStride(sizeof(ONEVERTEX));
 
 	_allLodLoc._sun_light_dir = _layer_draw.at(0)._programState->getUniformLocation("u_DirLightSun");
 	_allLodLoc._sun_light_col = _layer_draw.at(0)._programState->getUniformLocation("u_ColLightSun");
@@ -1101,23 +1099,22 @@ void LodHM::createShaderGrid()
 
 	auto & pipelineDescriptor = _customCommandGrid.getPipelineDescriptor();
 	pipelineDescriptor.programState = _programStateGrid;
-	auto layout = _programStateGrid->getVertexLayout();
 
 	const auto & attributeInfo = _programStateGrid->getProgram()->getActiveAttributes();
 
 	const auto & iter1 = attributeInfo.find("a_height");
 	if (iter1 != attributeInfo.end())
-		layout->setAttribute("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
+		_programStateGrid->setVertexAttrib("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
 
 	const auto & iter5 = attributeInfo.find("a_vertex_x");
 	if (iter5 != attributeInfo.end())
-		layout->setAttribute("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
+		_programStateGrid->setVertexAttrib("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
 
 	const auto & iter6 = attributeInfo.find("a_vertex_z");
 	if (iter6 != attributeInfo.end())
-		layout->setAttribute("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
+		_programStateGrid->setVertexAttrib("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
 
-	layout->setLayout(sizeof(ONEVERTEX));
+	_programStateGrid->setVertexStride(sizeof(ONEVERTEX));
 
 	_allLodLocGrid._vp = _programStateGrid->getUniformLocation("u_VPMatrix");
 
@@ -1166,23 +1163,22 @@ void LodHM::createShaderNorm()
 
 	auto& pipelineDescriptor = _customCommandNorm.getPipelineDescriptor();
 	pipelineDescriptor.programState = _programStateNorm;
-	auto layout = _programStateNorm->getVertexLayout();
 
 	const auto& attributeInfo = _programStateNorm->getProgram()->getActiveAttributes();
 
 	const auto& iter1 = attributeInfo.find("a_height");
 	if (iter1 != attributeInfo.end())
-		layout->setAttribute("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
+		_programStateNorm->setVertexAttrib("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
 
 	const auto & iter5 = attributeInfo.find("a_vertex_x");
 	if (iter5 != attributeInfo.end())
-		layout->setAttribute("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
+		_programStateNorm->setVertexAttrib("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
 
 	const auto & iter6 = attributeInfo.find("a_vertex_z");
 	if (iter6 != attributeInfo.end())
-		layout->setAttribute("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
+		_programStateNorm->setVertexAttrib("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
 
-	layout->setLayout(sizeof(ONEVERTEX));
+	_programStateNorm->setVertexStride(sizeof(ONEVERTEX));
 
 	_allLodLocNorm._vp = _programStateNorm->getUniformLocation("u_VPMatrix");
 
@@ -1231,23 +1227,21 @@ void LodHM::createShadowShader()
 	program->autorelease();
 	_programStateShadow = new backend::ProgramState(program);
 
-	auto layout = _programStateShadow->getVertexLayout();
-
 	const auto & attributeInfo = _programStateShadow->getProgram()->getActiveAttributes();
 
 	const auto & iter1 = attributeInfo.find("a_height");
 	if (iter1 != attributeInfo.end())
-		layout->setAttribute("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
+		_programStateShadow->setVertexAttrib("a_height", iter1->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, y), false);
 
 	const auto & iter5 = attributeInfo.find("a_vertex_x");
 	if (iter5 != attributeInfo.end())
-		layout->setAttribute("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
+		_programStateShadow->setVertexAttrib("a_vertex_x", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, x), false);
 
 	const auto & iter6 = attributeInfo.find("a_vertex_z");
 	if (iter6 != attributeInfo.end())
-		layout->setAttribute("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
+		_programStateShadow->setVertexAttrib("a_vertex_z", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(ONEVERTEX, z), false);
 
-	layout->setLayout(sizeof(ONEVERTEX));
+	_programStateShadow->setVertexStride(sizeof(ONEVERTEX));
 
 	_allLodLocShadow._vp = _programStateShadow->getUniformLocation("u_VPMatrix");
 

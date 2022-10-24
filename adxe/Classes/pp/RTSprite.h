@@ -3,8 +3,7 @@
 #ifndef _RTSprite_H__
 #define _RTSprite_H__
 
-#include "2d/CCSprite.h"
-#include <vector>
+#include "cocos2d.h"
 
 namespace pp
 {

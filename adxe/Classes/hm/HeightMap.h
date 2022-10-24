@@ -11,7 +11,7 @@
 #define CHUNK_PTR(j, i) _chunk_arr[(_j_cur_chunk - j) * 3 + (_i_cur_chunk - i) + 4]
 #define CHUNK_KEY(j_chunk, i_chunk) int((j_chunk << 16) | (i_chunk & 0xffff))
 
-namespace cocos2d
+namespace ax
 {
 	class Image;
 }

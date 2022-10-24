@@ -35,23 +35,21 @@ FilterBase::~FilterBase()
 
 void FilterBase::initLayout()
 {
-	auto vertexLayout = _programState->getVertexLayout();
-
 	///a_position
-	vertexLayout->setAttribute(backend::ATTRIBUTE_NAME_POSITION,
+	_programState->setVertexAttrib(backend::ATTRIBUTE_NAME_POSITION,
 		_programState->getAttributeLocation(backend::Attribute::POSITION),
 		backend::VertexFormat::FLOAT3,
 		offsetof(RTSprite::VERTEX, pos),
 		false);
 
 	///a_texCoord
-	vertexLayout->setAttribute(backend::ATTRIBUTE_NAME_TEXCOORD,
+	_programState->setVertexAttrib(backend::ATTRIBUTE_NAME_TEXCOORD,
 		_programState->getAttributeLocation(backend::Attribute::TEXCOORD),
 		backend::VertexFormat::FLOAT2,
 		offsetof(RTSprite::VERTEX, coord),
 		false);
 
-	vertexLayout->setLayout(sizeof(RTSprite::VERTEX));
+	_programState->setVertexStride(sizeof(RTSprite::VERTEX));
 
 	_vpLoc = _programState->getUniformLocation("u_MVPMatrix");
 }

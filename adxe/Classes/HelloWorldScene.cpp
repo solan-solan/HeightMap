@@ -82,7 +82,7 @@ bool HelloWorld::init()
     auto closeItem = MenuItemImage::create(
                                            "CloseNormal.png",
                                            "CloseSelected.png",
-                                           CC_CALLBACK_1(HelloWorld::menuCloseCallback, this));
+                                           AX_CALLBACK_1(HelloWorld::menuCloseCallback, this));
 
     if (closeItem == nullptr ||
         closeItem->getContentSize().width <= 0 ||
@@ -265,9 +265,9 @@ bool HelloWorld::init()
 
     // Init control events
     auto listener = EventListenerTouchAllAtOnce::create();
-    listener->onTouchesBegan = CC_CALLBACK_2(HelloWorld::onTouchesBegan, this);
-    listener->onTouchesMoved = CC_CALLBACK_2(HelloWorld::onTouchesMoved, this);
-    listener->onTouchesEnded = CC_CALLBACK_2(HelloWorld::onTouchesEnd, this);
+    listener->onTouchesBegan = AX_CALLBACK_2(HelloWorld::onTouchesBegan, this);
+    listener->onTouchesMoved = AX_CALLBACK_2(HelloWorld::onTouchesMoved, this);
+    listener->onTouchesEnded = AX_CALLBACK_2(HelloWorld::onTouchesEnd, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
     // Init pp filters
@@ -369,7 +369,7 @@ void HelloWorld::onTouchesMoved(const std::vector<cocos2d::Touch*>& touches, coc
 {
     auto touch = touches[0];
     Vec2 delta =  touch->getDelta();
-    float angle = CC_DEGREES_TO_RADIANS(-delta.x) * _settings._gor_vel;
+    float angle = AX_DEGREES_TO_RADIANS(-delta.x) * _settings._gor_vel;
 
     // Rotate player
     auto from = _player->getRotationQuat();
@@ -453,7 +453,7 @@ void HelloWorld::addUi()
         "res/ui/check_box_normal_disable.png",
         "res/ui/check_box_active_disable.png");
     cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f + 200.f * sc_fct));
-    cb->addEventListener(CC_CALLBACK_2(HelloWorld::enableGrass, this));
+    cb->addEventListener(AX_CALLBACK_2(HelloWorld::enableGrass, this));
     cb->setScale(3.f * sc_fct);
     cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
@@ -470,7 +470,7 @@ void HelloWorld::addUi()
         "res/ui/check_box_normal_disable.png",
         "res/ui/check_box_active_disable.png");
     cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f));
-    cb->addEventListener(CC_CALLBACK_2(HelloWorld::showGrid, this));
+    cb->addEventListener(AX_CALLBACK_2(HelloWorld::showGrid, this));
     cb->setScale(3.f * sc_fct);
     cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
@@ -487,7 +487,7 @@ void HelloWorld::addUi()
         "res/ui/check_box_normal_disable.png",
         "res/ui/check_box_active_disable.png");
     cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f - 200.f * sc_fct));
-    cb->addEventListener(CC_CALLBACK_2(HelloWorld::showNormal, this));
+    cb->addEventListener(AX_CALLBACK_2(HelloWorld::showNormal, this));
     cb->setScale(3.f * sc_fct);
     cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
@@ -505,7 +505,7 @@ void HelloWorld::addUi()
     sl->loadProgressBarTexture("res/ui/sliderProgress.png");
     sl->setMaxPercent(10);
     sl->setPosition(Vec2(sz.width / 2.f, 50.f * sc_fct));
-    sl->addEventListener(CC_CALLBACK_2(HelloWorld::changeSpeed, this));
+    sl->addEventListener(AX_CALLBACK_2(HelloWorld::changeSpeed, this));
     sl->setScale(3.f * sc_fct);
     sl->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(sl);
@@ -523,7 +523,7 @@ void HelloWorld::addUi()
     sl->loadProgressBarTexture("res/ui/sliderProgress.png");
     sl->setMaxPercent(100);
     sl->setPosition(Vec2(sz.width / 2.f, sz.height - 50.f * sc_fct));
-    sl->addEventListener(CC_CALLBACK_2(HelloWorld::sunDir, this));
+    sl->addEventListener(AX_CALLBACK_2(HelloWorld::sunDir, this));
     sl->setScale(3.f * sc_fct);
     sl->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(sl);

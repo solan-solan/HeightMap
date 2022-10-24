@@ -64,7 +64,7 @@ void RenderTexture3D::begin()
 	auto* beginCommand = renderer->nextCallbackCommand();
 	beginCommand->init(_globalZOrder, _transformMatrix, Node::FLAGS_RENDER_AS_3D);
 	beginCommand->setTransparent(_is_transparent_begin);
-    beginCommand->func = CC_CALLBACK_0(RenderTexture3D::onBegin, this);
+    beginCommand->func = AX_CALLBACK_0(RenderTexture3D::onBegin, this);
     renderer->addCommand(beginCommand);
 }
 
@@ -94,7 +94,7 @@ void RenderTexture3D::end()
 	//-----------
 
 	endCommand->setTransparent(_is_transparent_end);
-    endCommand->func = CC_CALLBACK_0(RenderTexture3D::onEnd, this);
+    endCommand->func = AX_CALLBACK_0(RenderTexture3D::onEnd, this);
 
     Director* director = Director::getInstance();
     CCASSERT(nullptr != director, "Director is null when setting matrix stack");
@@ -154,7 +154,7 @@ bool RenderTexture3D::initWithWidthAndHeight(int w, int h, cocos2d::backend::Pix
 			_texture2D = new (std::nothrow) Texture2D();
 			if (_texture2D)
 			{
-				_texture2D->updateTextureDescriptor(descriptor, CC_ENABLE_PREMULTIPLIED_ALPHA != 0);
+				_texture2D->updateTextureDescriptor(descriptor, AX_ENABLE_PREMULTIPLIED_ALPHA != 0);
 			}
 			else
 				break;

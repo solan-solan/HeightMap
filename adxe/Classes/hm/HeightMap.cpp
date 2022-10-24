@@ -597,36 +597,34 @@ void HeightMap::createGrassShader()
 		pipelineDescriptor.programState = _programState;
 	}
 
-	auto layout = _programState->getVertexLayout();
-
 	const auto& attributeInfo = _programState->getProgram()->getActiveAttributes();
 
 	// Set attributes
 	const auto& iter1 = attributeInfo.find("a_position");
 	if (iter1 != attributeInfo.end())
-		layout->setAttribute("a_position", iter1->second.location, backend::VertexFormat::FLOAT3, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, i), false);
+		_programState->setVertexAttrib("a_position", iter1->second.location, backend::VertexFormat::FLOAT3, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, i), false);
 
 	const auto& iter2 = attributeInfo.find("a_color");
 	if (iter2 != attributeInfo.end())
-		layout->setAttribute("a_color", iter2->second.location, backend::VertexFormat::FLOAT2, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, ratex), false);
+		_programState->setVertexAttrib("a_color", iter2->second.location, backend::VertexFormat::FLOAT2, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, ratex), false);
 
 	const auto& iter3 = attributeInfo.find("a_texCoord");
 	if (iter3 != attributeInfo.end())
-		layout->setAttribute("a_texCoord", iter3->second.location, backend::VertexFormat::FLOAT2, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, tx), false);
+		_programState->setVertexAttrib("a_texCoord", iter3->second.location, backend::VertexFormat::FLOAT2, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, tx), false);
 
 	const auto& iter4 = attributeInfo.find("a_texIdx");
 	if (iter4 != attributeInfo.end())
-		layout->setAttribute("a_texIdx", iter4->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, text_idx), false);
+		_programState->setVertexAttrib("a_texIdx", iter4->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, text_idx), false);
 
 	const auto& iter5 = attributeInfo.find("a_size");
 	if (iter5 != attributeInfo.end())
-		layout->setAttribute("a_size", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, size), false);
+		_programState->setVertexAttrib("a_size", iter5->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, size), false);
 
 	const auto& iter6 = attributeInfo.find("a_patch_num");
 	if (iter6 != attributeInfo.end())
-		layout->setAttribute("a_patch_num", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, patch_num), false);
+		_programState->setVertexAttrib("a_patch_num", iter6->second.location, backend::VertexFormat::FLOAT, offsetof(GRASS_MODEL::ONEVERTEX_GRASS, patch_num), false);
 
-	layout->setLayout(sizeof(GRASS_MODEL::ONEVERTEX_GRASS));
+	_programState->setVertexStride(sizeof(GRASS_MODEL::ONEVERTEX_GRASS));
 
 	// Get uniforms
 	_grass_gl._upLoc = _programState->getUniformLocation("u_up");
@@ -759,8 +757,8 @@ void HeightMap::createGrassBuffers()
 		_grass_gl._dd.at(k)._customCommand.setTransparent(true);
 		_grass_gl._dd.at(k)._customCommand.set3D(true);
 
-		_grass_gl._dd.at(k)._customCommand.setBeforeCallback(CC_CALLBACK_0(HeightMap::onBeforeDraw, this));
-		_grass_gl._dd.at(k)._customCommand.setAfterCallback(CC_CALLBACK_0(HeightMap::onAfterDraw, this));
+		_grass_gl._dd.at(k)._customCommand.setBeforeCallback(AX_CALLBACK_0(HeightMap::onBeforeDraw, this));
+		_grass_gl._dd.at(k)._customCommand.setAfterCallback(AX_CALLBACK_0(HeightMap::onAfterDraw, this));
 
 		// Set blending
 		auto& blend = _grass_gl._dd.at(k)._customCommand.getPipelineDescriptor().blendDescriptor;

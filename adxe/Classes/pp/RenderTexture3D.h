@@ -1,7 +1,7 @@
 #ifndef _RENDER_TEXTURE_3D_H__
 #define _RENDER_TEXTURE_3D_H__
 
-#include "2d/CCRenderTexture.h"
+#include "cocos2d.h"
 
 namespace pp
 {
