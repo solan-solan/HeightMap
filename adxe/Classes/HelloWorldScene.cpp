@@ -129,7 +129,6 @@ bool HelloWorld::init()
             Mat4::createOrthographicOffCenter(0, _zoom[0], 0, _zoom[1], _nearPlane, _farPlane, &_projection);
             _viewProjectionDirty = true;
             _frustumDirty = true;
-            _type = Type::ORTHOGRAPHIC;
         }
     };
     static_cast<CameraCocos*>(_defaultCamera)->initOrtho(sz.width, sz.height, -1024.f, 1024.f);

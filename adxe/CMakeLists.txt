@@ -29,6 +29,8 @@ set(APP_NAME MyGame)
 
 project(${APP_NAME})
 
+option(AX_ENABLE_EXT_LUA "Build lua libraries" OFF)
+
 if(NOT DEFINED BUILD_ENGINE_DONE) # to test HelloCpp into root project
     if(XCODE)
         set(CMAKE_XCODE_GENERATE_TOP_LEVEL_PROJECT_ONLY TRUE)
@@ -174,7 +176,6 @@ if(NOT ANDROID)
 else()
     add_library(${APP_NAME} SHARED ${all_code_files})
     # whole archive for jni
-    add_subdirectory(${_AX_ROOT_PATH}/core/platform/android ${ENGINE_BINARY_PATH}/core/platform)
     target_link_libraries(${APP_NAME} -Wl,--whole-archive cpp_android_spec -Wl,--no-whole-archive)
     config_android_shared_libs("org.axmol.lib" "${CMAKE_CURRENT_SOURCE_DIR}/proj.android/app/src")
 endif()
@@ -230,7 +231,6 @@ if (AX_WITH_YAML_CPP)
 endif()
 
 if (_AX_USE_PREBUILT) # support windows only
-    include(${_AX_ROOT_PATH}/cmake/Modules/AXConfigDefine.cmake)
     use_ax_compile_define(${APP_NAME})
 
     include(${_AX_ROOT_PATH}/cmake/Modules/AXLinkHelpers.cmake)

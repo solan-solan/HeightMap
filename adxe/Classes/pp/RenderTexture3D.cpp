@@ -55,17 +55,18 @@ void RenderTexture3D::begin()
         director->multiplyMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_PROJECTION, orthoMatrix);
     }
 
-    _groupCommand.init(-1);
+	Renderer* renderer = Director::getInstance()->getRenderer();
 
-    Renderer *renderer =  Director::getInstance()->getRenderer();
-    renderer->addCommand(&_groupCommand);
-    renderer->pushGroup(_groupCommand.getRenderQueueID());
+	auto* groupCommand = renderer->getNextGroupCommand();
+	groupCommand->init(-1);
+	renderer->addCommand(groupCommand);
+	renderer->pushGroup(groupCommand->getRenderQueueID());
 
 	auto* beginCommand = renderer->nextCallbackCommand();
 	beginCommand->init(_globalZOrder, _transformMatrix, Node::FLAGS_RENDER_AS_3D);
 	beginCommand->setTransparent(_is_transparent_begin);
-    beginCommand->func = AX_CALLBACK_0(RenderTexture3D::onBegin, this);
-    renderer->addCommand(beginCommand);
+	beginCommand->func = AX_CALLBACK_0(RenderTexture3D::onBegin, this);
+	renderer->addCommand(beginCommand);
 }
 
 void RenderTexture3D::onBegin()
