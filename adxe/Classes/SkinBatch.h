@@ -27,6 +27,7 @@ namespace model
 
         float _skin_bone_number = 0.f;
         float _float_text_size = 0.f;
+        int _fill_lines = 0.f;
         ax::Texture2D* _f_text = nullptr; // Float texture to pass [Matrix_Pallite, Model Matrix, Normal Matrix] to the shader
 
         // Shaders to process float texture

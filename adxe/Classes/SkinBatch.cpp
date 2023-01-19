@@ -50,7 +50,7 @@ bool SkinBatch::init()
     int need_pixels = num_pix_for_patch * _patch_num;
 
     // Set float texture size
-    std::array<int, 8> sizes = { 16, 32, 64, 128, 256, 512, 1024, 2048 };
+    std::array<int, 9> sizes = { 16, 32, 64, 128, 256, 512, 1024, 2048, 4096 };
     for (int i = 0; i < sizes.size(); ++i)
         if (sizes[i] * sizes[i] > need_pixels)
         {
@@ -65,11 +65,19 @@ bool SkinBatch::init()
     }
 
     // Intermediate array for data updating
-    _tmp = new float[(_float_text_size * _float_text_size) * 4];
+    _fill_lines = need_pixels / int(_float_text_size) + 1;
+    _tmp = new float[(_float_text_size * _float_text_size) * 4]; // float size
+    memset(_tmp, 0x0, (_float_text_size * _float_text_size) * 4 * sizeof(float)); // byte size
 
     // Create float texture
     _f_text = new ax::Texture2D();
     _f_text->setAliasTexParameters(); // NEAREST is needed
+
+    _f_text->updateWithData(_tmp, (_float_text_size * _float_text_size) * 4,
+        ax::backend::PixelFormat::RGBA32F,
+        ax::backend::PixelFormat::RGBA32F,
+        _float_text_size, _float_text_size,
+        false, 0);
 
     // Create shader
     std::string def_model_sh = "#define MAX_DIRECTIONAL_LIGHT_NUM 1\n#define MAX_POINT_LIGHT_NUM 0\n#define MAX_SPOT_LIGHT_NUM 0\n";
@@ -185,11 +193,14 @@ void SkinBatch::update(float time)
         }
     }
 
-    _f_text->updateWithData(_tmp, (_float_text_size * _float_text_size) * 4,
-        ax::backend::PixelFormat::RGBA32F,
-        ax::backend::PixelFormat::RGBA32F,
-        _float_text_size, _float_text_size,
-        false, 0);
+//    _f_text->updateWithData(_tmp, (_float_text_size * _float_text_size) * 4,
+//        ax::backend::PixelFormat::RGBA32F,
+//        ax::backend::PixelFormat::RGBA32F,
+//        _float_text_size, _float_text_size,
+//        false, 0);
+
+    _f_text->updateWithSubData(_tmp, 0, 0, _float_text_size, _fill_lines, 0);
+
 }
 
 void SkinBatch::setScale(float scale, int num)
