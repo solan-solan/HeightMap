@@ -107,7 +107,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
 
     register_all_packages();
 
-	auto resourceSize = Size(1920.f, 1080.f);
+    auto resourceSize = Size(2400.f, 1080.f);
 
 	float resAspect = resourceSize.width / resourceSize.height;
 	float frame_aspect = frameSize.width / frameSize.height;

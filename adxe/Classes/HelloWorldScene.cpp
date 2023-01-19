@@ -28,6 +28,9 @@
 #include "pp/FilterBase.h"
 #include "pp/FilterDof.h"
 #include "pp/RenderTexture3D.h"
+#include "SkinBatch.h"
+
+#include "renderer/backend/Device.h"
 
 USING_NS_CC;
 
@@ -242,6 +245,43 @@ bool HelloWorld::init()
     _player->setPositionY(_height_map->getHeight(_player->getPositionX(), _player->getPositionZ(), &n));
     setCameraBehind(true);
 
+    //========== Create SkinBatch to represent float point texture usage
+    //---first
+    auto* sb = model::SkinBatch::create("res/model/hen.c3b", 50);
+    sb->setCameraMask((unsigned short)CameraFlag::USER1 | (unsigned short)CameraFlag::USER2, true);
+    addChild(sb);
+
+    // Random populate patches
+    sb->randomPopulate(_player->getPosition3D() - Vec3(0.f, 0.f, 3.f), 2.f, 0.2f, 0.4f, _height_map);
+
+    // Run some action for all patches
+    auto* an_peck = Animate3D::create(Animation3D::create("res/model/hen.c3b", "idle"));
+    auto* an_idle = Animate3D::create(Animation3D::create("res/model/hen.c3b", "peck"));
+    auto* ja = JumpBy::create(1.f, Vec2(0.f, 0.f), 1.f, 2);
+    cocos2d::Vector<cocos2d::FiniteTimeAction*> ac = { ja, an_peck, an_idle };
+    sb->runActionAllLoop(ac, 0.f, 1.5f);
+
+    // Launch to update float texture data
+    sb->scheduleUpdate();
+
+    //---second
+    sb = model::SkinBatch::create("res/model/hen.c3b", 50);
+    sb->setCameraMask((unsigned short)CameraFlag::USER1 | (unsigned short)CameraFlag::USER2, true);
+    addChild(sb);
+
+    // Random populate patches
+    sb->randomPopulate(_player->getPosition3D() - Vec3(0.f, 0.f, 3.f), 2.f, 0.2f, 0.4f, _height_map);
+
+    // Run some action for all patches
+    an_peck = Animate3D::create(Animation3D::create("res/model/hen.c3b", "idle"));
+    an_idle = Animate3D::create(Animation3D::create("res/model/hen.c3b", "peck"));
+    ja = JumpBy::create(1.f, Vec2(0.f, 0.f), 1.f, 2);
+    cocos2d::Vector<cocos2d::FiniteTimeAction*> ac1 = { ja, an_peck, an_idle };
+    sb->runActionAllLoop(ac1, 0.f, 1.5f);
+
+    // Launch to update float texture data
+    sb->scheduleUpdate();
+
     // Set skybox
     TextureCube* textureCube = TextureCube::create("res/skybox/left.jpg", "res/skybox/right.jpg",
         "res/skybox/top.jpg", "res/skybox/bottom.jpg",
@@ -335,12 +375,10 @@ void HelloWorld::onTouchesBegan(const std::vector<cocos2d::Touch*>& touches, coc
             {
                 if (time != 0.f && time != 1.f)
                 {
-                    Vec3 f;
-                    _scene->getNodeToWorldTransform().getForwardVector(&f);
                     Vec3 p = _target->getPosition3D() + -_scene->_player_settings._forward * _scene->_player_settings._speed;
                     Vec3 n;
                     p.y = _scene->_height_map->getHeight(p.x, p.z, &n);
-                    _scene->_player->setPosition3D(p);
+                    _target->setPosition3D(p);
                     _scene->setCameraBehind();
                 }
             }
@@ -438,11 +476,11 @@ void HelloWorld::update(float time)
 void HelloWorld::addUi()
 {
     auto sz = Director::getInstance()->getVisibleSize();
-    float sc_fct = 1.f / Director::getInstance()->getContentScaleFactor();
+    float sc_fct = Director::getInstance()->getContentScaleFactor();
 
     //--- Grass
-    auto* txt = ui::Text::create("grass", "arial", 32 * sc_fct);
-    txt->setPosition(Vec2(sz.width - 200.f * sc_fct, sz.height / 2.f + 200.f * sc_fct));
+    auto* txt = ui::Text::create("grass", "arial", 24);
+    txt->setPosition(Vec2(sz.width - 100.f, sz.height / 2.f + 50.f));
     txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
@@ -451,15 +489,15 @@ void HelloWorld::addUi()
         "res/ui/check_box_active.png",
         "res/ui/check_box_normal_disable.png",
         "res/ui/check_box_active_disable.png");
-    cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f + 200.f * sc_fct));
+    cb->setPosition(Vec2(sz.width - 50.f, sz.height / 2.f + 50.f));
     cb->addEventListener(AX_CALLBACK_2(HelloWorld::enableGrass, this));
-    cb->setScale(3.f * sc_fct);
+    cb->setScale(sc_fct);
     cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
 
     //--- Grid
-    txt = ui::Text::create("grid", "arial", 32 * sc_fct);
-    txt->setPosition(Vec2(sz.width - 200.f * sc_fct, sz.height / 2.f));
+    txt = ui::Text::create("grid", "arial", 24);
+    txt->setPosition(Vec2(sz.width - 100.f, sz.height / 2.f));
     txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
@@ -468,15 +506,15 @@ void HelloWorld::addUi()
         "res/ui/check_box_active.png",
         "res/ui/check_box_normal_disable.png",
         "res/ui/check_box_active_disable.png");
-    cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f));
+    cb->setPosition(Vec2(sz.width - 50.f, sz.height / 2.f));
     cb->addEventListener(AX_CALLBACK_2(HelloWorld::showGrid, this));
-    cb->setScale(3.f * sc_fct);
+    cb->setScale(sc_fct);
     cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
 
     //--- Normal
-    txt = ui::Text::create("normal", "arial", 32 * sc_fct);
-    txt->setPosition(Vec2(sz.width - 200.f * sc_fct, sz.height / 2.f - 200.f * sc_fct));
+    txt = ui::Text::create("normal", "arial", 24);
+    txt->setPosition(Vec2(sz.width - 100.f, sz.height / 2.f - 50.f));
     txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
@@ -485,15 +523,15 @@ void HelloWorld::addUi()
         "res/ui/check_box_active.png",
         "res/ui/check_box_normal_disable.png",
         "res/ui/check_box_active_disable.png");
-    cb->setPosition(Vec2(sz.width - 100.f * sc_fct, sz.height / 2.f - 200.f * sc_fct));
+    cb->setPosition(Vec2(sz.width - 50.f, sz.height / 2.f - 50.f));
     cb->addEventListener(AX_CALLBACK_2(HelloWorld::showNormal, this));
-    cb->setScale(3.f * sc_fct);
+    cb->setScale(sc_fct);
     cb->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(cb);
 
     //--- Speed
-    txt = ui::Text::create("speed", "arial", 32 * sc_fct);
-    txt->setPosition(Vec2(sz.width / 2.f - 100.f * sc_fct, 50.f * sc_fct));
+    txt = ui::Text::create("speed", "arial", 24);
+    txt->setPosition(Vec2(sz.width / 2.f - 200.f, 50.f));
     txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
@@ -503,15 +541,16 @@ void HelloWorld::addUi()
     sl->loadSlidBallTextures("re/ui/sliderThumb.png", "res/ui/sliderThumb.png", "");
     sl->loadProgressBarTexture("res/ui/sliderProgress.png");
     sl->setMaxPercent(10);
-    sl->setPosition(Vec2(sz.width / 2.f, 50.f * sc_fct));
+    sl->setPosition(Vec2(sz.width / 2.f, 50.f));
+    sl->setAnchorPoint(Vec2(0.5f, 0.f));
     sl->addEventListener(AX_CALLBACK_2(HelloWorld::changeSpeed, this));
-    sl->setScale(3.f * sc_fct);
+    sl->setScale(sc_fct);
     sl->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(sl);
 
     //--- Sun
-    txt = ui::Text::create("sun", "arial", 32 * sc_fct);
-    txt->setPosition(Vec2(sz.width / 2.f - 100.f * sc_fct, sz.height - 50.f * sc_fct));
+    txt = ui::Text::create("sun", "arial", 24);
+    txt->setPosition(Vec2(sz.width / 2.f - 200.f, sz.height - 50.f));
     txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
@@ -521,9 +560,10 @@ void HelloWorld::addUi()
     sl->loadSlidBallTextures("re/ui/sliderThumb.png", "res/ui/sliderThumb.png", "");
     sl->loadProgressBarTexture("res/ui/sliderProgress.png");
     sl->setMaxPercent(100);
-    sl->setPosition(Vec2(sz.width / 2.f, sz.height - 50.f * sc_fct));
+    sl->setPosition(Vec2(sz.width / 2.f, sz.height - 50.f));
+    sl->setAnchorPoint(Vec2(0.5f, 0.f));
     sl->addEventListener(AX_CALLBACK_2(HelloWorld::sunDir, this));
-    sl->setScale(3.f * sc_fct);
+    sl->setScale(sc_fct);
     sl->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(sl);
 }

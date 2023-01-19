@@ -22,16 +22,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
-package org.cocos2dx.cpp;
+package org.axmol.cpp;
 
 import android.os.Bundle;
-import org.cocos2dx.lib.Cocos2dxActivity;
-import org.cocos2dx.lib.SharedLoader;
+import org.axmol.lib.AxmolActivity;
+import org.axmol.lib.SharedLoader;
 import android.os.Build;
 import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
 
-public class AppActivity extends Cocos2dxActivity {
+public class AppActivity extends AxmolActivity {
     static {
         // DNT remove, some android simulator require explicit load shared libraries, otherwise will crash
         SharedLoader.load();

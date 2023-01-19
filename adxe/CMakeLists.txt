@@ -80,6 +80,7 @@ endif()
 list(APPEND GAME_SOURCE
      Classes/AppDelegate.cpp
      Classes/HelloWorldScene.cpp
+     Classes/SkinBatch.cpp
      Classes/hm/HeightMap.cpp
      Classes/hm/LodHM.cpp
      Classes/hm/HeightChunk.cpp
@@ -93,6 +94,7 @@ list(APPEND GAME_SOURCE
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
      Classes/HelloWorldScene.h
+     Classes/SkinBatch.h
      Classes/hm/HeightMap.h
      Classes/hm/LodHM.h
      Classes/hm/HeightChunk.h
