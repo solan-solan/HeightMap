@@ -14,7 +14,7 @@ android {
     def cmakeOptions = Eval.me(nbtInfo[3])
 
     defaultConfig {
-        applicationId "org.axmol.mygame"
+        applicationId "org.axmol.hellocpp"
         minSdkVersion PROP_MIN_SDK_VERSION
         targetSdkVersion PROP_TARGET_SDK_VERSION
         versionCode 1
@@ -38,7 +38,7 @@ android {
         java.srcDir "src"
         res.srcDir "res"
         manifest.srcFile "AndroidManifest.xml"
-        assets.srcDir "../../Resources"
+        assets.srcDir "assets"
     }
 
     externalNativeBuild {
@@ -86,22 +86,34 @@ android {
 }
 
 android.applicationVariants.all { variant ->
-    def project_root_folder = "${projectDir}/../.."
-    def dest_assets_folder = "${projectDir}/assets"
-
-    // delete previous files first
-    delete dest_assets_folder
     def targetName = variant.name.capitalize()
-    def copyTaskName = "copy${targetName}ResourcesToAssets"
-    
-    tasks.register(copyTaskName) {
-        copy {
-            from "${buildDir}/../../../Resources"
-            into "${buildDir}/intermediates/assets/${variant.dirName}"
-            exclude "**/*.gz"
+
+    def copyContentToAssets = "copy${targetName}ContentToAssets"
+    tasks.register("copy${targetName}ContentToAssets") {
+        doFirst {
+            delete "${projectDir}/assets"
+        }
+        doLast {
+            copy {
+                from "${projectDir}/../../Resources"
+                into "${projectDir}/assets"
+                exclude "**/*.gz"
+            }
         }
     }
-    tasks.getByName("pre${targetName}Build").dependsOn copyTaskName
+    tasks.getByName("pre${targetName}Build").dependsOn copyContentToAssets
+
+    tasks.register("copy${targetName}AxslcToAssets") {
+        doFirst {
+            delete "${projectDir}/assets/axslc"
+        }
+        doLast {
+            copy {
+                from "${projectDir}/../build/runtime/axslc"
+                into "${projectDir}/assets/axslc"
+            }
+        }
+    }
 }
 
 dependencies {
@@ -111,9 +123,11 @@ dependencies {
 
 project.afterEvaluate {
     if (tasks.findByName("externalNativeBuildDebug")) {
-        compileDebugJavaWithJavac.dependsOn externalNativeBuildDebug
+        copyDebugAxslcToAssets.dependsOn externalNativeBuildDebug
+        compileDebugJavaWithJavac.dependsOn copyDebugAxslcToAssets
     }
     if (tasks.findByName("externalNativeBuildRelease")) {
-        compileReleaseJavaWithJavac.dependsOn externalNativeBuildRelease  
+        copyReleaseAxslcToAssets.dependsOn externalNativeBuildRelease
+        compileReleaseJavaWithJavac.dependsOn copyReleaseAxslcToAssets
     }
 }

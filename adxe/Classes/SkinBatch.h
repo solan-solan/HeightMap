@@ -41,6 +41,8 @@ namespace model
         SkinBatch(const std::string& mdl_path, int patch_num) : _mdl_path(mdl_path), _patch_num(patch_num)
         {}
 
+        void getNormalMat3OfMat4(const cocos2d::Mat4& mat, float normalMat[]);
+
     public:
 
         ~SkinBatch();

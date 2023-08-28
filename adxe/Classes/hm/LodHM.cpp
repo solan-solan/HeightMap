@@ -688,7 +688,7 @@ void LodHM::createLineBuffers()
 	_customCommandGrid.set3D(true);
 
 	_customCommandGrid.setPrimitiveType(CustomCommand::PrimitiveType::LINE);
-	_customCommandGrid.setLineWidth(1.f);
+	//_customCommandGrid.setLineWidth(1.f);
 
 }
 
@@ -715,7 +715,7 @@ void LodHM::createNormBuffers()
 	_customCommandNorm.set3D(true);
 
 	_customCommandNorm.setPrimitiveType(CustomCommand::PrimitiveType::LINE);
-	_customCommandNorm.setLineWidth(1.f);
+	//_customCommandNorm.setLineWidth(1.f);
 }
 
 bool LodHM::rayCast(const cocos2d::Vec3 & start_p, const cocos2d::Vec3 & end_p, cocos2d::Vec3 * ret)
@@ -1252,7 +1252,7 @@ void LodHM::createShadowShader()
 	{
 		_allLodLocShadow._ndraw = _programStateShadow->getUniformLocation("u_Ndraw");
 		Vec4 n_draw = Vec4::ZERO;
-		_programStateShadow->setUniform(_allLodLoc._ndraw, &n_draw, sizeof(n_draw));
+		_programStateShadow->setUniform(_allLodLocShadow._ndraw, &n_draw, sizeof(n_draw));
 	}
 }
 

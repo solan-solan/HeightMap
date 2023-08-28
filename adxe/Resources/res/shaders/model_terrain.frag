@@ -1,3 +1,5 @@
+precision highp float;
+
 #ifdef GL_ES
     precision mediump float;
 
@@ -93,7 +95,7 @@
         float sh_cf[DEPTH_TEXT_COUNT + 1];
         sh_cf[0] = 1.0;
         int sh_cnt = 0;
-        float bias = 0.0005; // Add bias to reduce shadow acne (error margin)
+        /*float bias = 0.0005; // Add bias to reduce shadow acne (error margin)
         for (int i = 0; i < DEPTH_TEXT_COUNT; ++i)
         {
             vec4 shMapPos = v_smcoord[i] / v_smcoord[i].w;
@@ -120,7 +122,7 @@
                 shadow /= (u_smooth_rate_sh * 2.0 + 1.0) * (u_smooth_rate_sh * 2.0 + 1.0);
                 sh_cf[sh_cnt] = min(shadow, sh_cf[sh_cnt - 1]);
             }
-        }
+        }*/
         return sh_cf[sh_cnt];
     }
 #endif

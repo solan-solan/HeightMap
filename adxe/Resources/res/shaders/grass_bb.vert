@@ -32,7 +32,7 @@ uniform vec2 u_dist_alpha;
     varying mediump vec2 v_texCoord;
     varying mediump vec3 v_normal;
     varying mediump float v_dist_alpha;
-    varying mediump float v_texIdx;
+    varying highp float v_texIdx;
 #else
     #ifdef SHADOW
         varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
@@ -41,12 +41,13 @@ uniform vec2 u_dist_alpha;
     varying vec2 v_texCoord;
     varying vec3 v_normal;
     varying float v_dist_alpha;
-    varying float v_texIdx;
+    varying highp float v_texIdx;
 #endif
 
 void main()
 {
-    v_texIdx = a_texIdx;
+    //v_texIdx = a_texIdx;
+    v_texIdx = float(int(step(0.5, a_texIdx)));
     float x = a_position.x;
     float z = a_position.z;
 

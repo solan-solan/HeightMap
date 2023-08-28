@@ -182,8 +182,9 @@ void SkinBatch::update(float time)
         }
 
         // Add normal transform data
-        auto tr_nrm = utils::getNormalMat3OfMat4(tr);
-        for (int i = 0; i < tr_nrm.size(); i += 3)
+        float tr_nrm[9] = { 0, };
+        getNormalMat3OfMat4(tr, tr_nrm);
+        for (int i = 0; i < sizeof(tr_nrm) / sizeof(float); i += 3)
         {
             _tmp[j] = tr_nrm[i];
             _tmp[j + 1] = tr_nrm[i + 1];
@@ -274,4 +275,22 @@ void SkinBatch::runActionAllLoop(const cocos2d::Vector<cocos2d::FiniteTimeAction
             ac_l.pushBack(a->clone());
         ch->runAction(RepeatForever::create(Sequence::create(ac_l)));
     }
+}
+
+void SkinBatch::getNormalMat3OfMat4(const Mat4& mat, float normalMat[])
+{
+    //	std::vector<float> normalMat(9);
+    Mat4 mvInverse = mat;
+    mvInverse.m[12] = mvInverse.m[13] = mvInverse.m[14] = 0.0f;
+    mvInverse.inverse();
+    mvInverse.transpose();
+    normalMat[0] = mvInverse.m[0];
+    normalMat[1] = mvInverse.m[1];
+    normalMat[2] = mvInverse.m[2];
+    normalMat[3] = mvInverse.m[4];
+    normalMat[4] = mvInverse.m[5];
+    normalMat[5] = mvInverse.m[6];
+    normalMat[6] = mvInverse.m[8];
+    normalMat[7] = mvInverse.m[9];
+    normalMat[8] = mvInverse.m[10];
 }

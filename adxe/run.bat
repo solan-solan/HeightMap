@@ -10,7 +10,7 @@ echo Entering run.bat directory: %myDir%
 
 cd /d %myDir%
 
-set APP_NAME=MyGame
+set APP_NAME=HelloCpp
 set BUILD_DIR=win64_build/build
 set BUILD_CFG=%1
 

@@ -186,7 +186,7 @@
             "patch_x_count": 2,
             "patch_y_count": 2,
             "shadow": {
-                "enable": true,
+                "enable": false,
                 "smooth_rate": 1.0,
                 "light_threshold": 0.2,
                 "fade_dist": 200.0

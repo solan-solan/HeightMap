@@ -171,6 +171,11 @@ bool RenderTexture3D::initWithWidthAndHeight(int w, int h, cocos2d::backend::Pix
 		{
 			descriptor.textureFormat = depthStencilFormat;
 
+			descriptor.samplerDescriptor.magFilter = ax::backend::SamplerFilter::NEAREST;
+			descriptor.samplerDescriptor.minFilter = ax::backend::SamplerFilter::NEAREST;
+			descriptor.samplerDescriptor.sAddressMode = ax::backend::SamplerAddressMode::CLAMP_TO_EDGE;
+			descriptor.samplerDescriptor.tAddressMode = ax::backend::SamplerAddressMode::CLAMP_TO_EDGE;
+
 			_depthStencilTexture = new (std::nothrow) Texture2D;
 			if (!_depthStencilTexture)
 			{

@@ -1,3 +1,4 @@
+precision highp float;
 
 #ifdef GL_ES
 precision lowp float;

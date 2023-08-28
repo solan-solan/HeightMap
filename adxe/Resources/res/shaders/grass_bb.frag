@@ -1,3 +1,6 @@
+precision highp float;
+precision highp int;
+
 #ifdef GL_ES
     precision mediump float;
     #ifdef SHADOW
@@ -7,7 +10,7 @@
     varying mediump vec2 v_texCoord;
     varying mediump vec3 v_normal;
     varying mediump float v_dist_alpha;
-    varying mediump float v_texIdx;
+    varying highp float v_texIdx;
 #else
     #ifdef SHADOW
         varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
@@ -16,7 +19,7 @@
     varying vec2 v_texCoord;
     varying vec3 v_normal;
     varying float v_dist_alpha;
-    varying float v_texIdx;
+    varying highp float v_texIdx;
 #endif
 
 uniform sampler2D u_texture[GRASS_TEXT_COUNT];
@@ -81,7 +84,8 @@ vec3 computeLighting(vec3 normalVector, vec3 lightDirection)
 void main(void)
 {
 	vec4 combinedColor = vec4(computeLighting(v_normal, -u_DirLight) + u_AmbColLight, 1.0);
-	vec4 px_col = texture2D(u_texture[int(step(0.5, v_texIdx))], v_texCoord);
+	//vec4 px_col = texture2D(u_texture[int(step(0.5, v_texIdx))], v_texCoord);
+    vec4 px_col = texture2D(u_texture[0], v_texCoord) * (1.0 - v_texIdx) + texture2D(u_texture[1], v_texCoord) * v_texIdx;
 	if (px_col.a < 0.5) discard;
 
 #ifdef SHADOW
