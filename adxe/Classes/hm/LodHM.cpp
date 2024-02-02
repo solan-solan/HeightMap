@@ -1,6 +1,6 @@
 #include "LodHM.h"
 #include "HeightMap.h"
-#include "renderer/backend/Device.h"
+#include "renderer/backend/DriverBase.h"
 #include "ShadowCamera.h"
 #include "../pp/RenderTexture3D.h"
 
@@ -864,7 +864,7 @@ void LodHM::createShader()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain.frag"));
 
-	std::string def = StringUtils::format("#define MAX_LAYER_COUNT %i\n", MAX_LAYER_COUNT);
+	std::string def = StringUtils::format("#version 300 es\n#define MAX_LAYER_COUNT %i\n", MAX_LAYER_COUNT);
 	def += StringUtils::format("#define LAYER_TEXTURE_SIZE %i\n", LAYER_TEXTURE_SIZE);
 
 	if (_lod_num == 1)
@@ -886,7 +886,7 @@ void LodHM::createShader()
 	if (_hM->_prop._layers.size() > 1)
 		def += "#define MULTI_LAYER\n";
 
-	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	auto program = backend::DriverBase::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	program->autorelease();
 	_layer_draw.at(0)._programState = new backend::ProgramState(program);
 
@@ -1089,11 +1089,11 @@ void LodHM::createShaderGrid()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.frag"));
 
-	std::string def;
+	std::string def = "#version 300 es\n";
 	if (_lod_num == 1)
 		def += "#define FIRST_LOD\n";
 
-	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	auto program = backend::DriverBase::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	program->autorelease();
 	_programStateGrid = new backend::ProgramState(program);
 
@@ -1153,11 +1153,11 @@ void LodHM::createShaderNorm()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/model_terrain_grid.frag"));
 
-	std::string def;
+	std::string def = "#version 300 es\n";
 	if (_lod_num == 1)
 		def += "#define FIRST_LOD\n";
 
-	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	auto program = backend::DriverBase::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	program->autorelease();
 	_programStateNorm = new backend::ProgramState(program);
 
@@ -1218,12 +1218,12 @@ void LodHM::createShadowShader()
 	std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/shadow_map.vert"));
 	std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename("res/shaders/shadow_map.frag"));
 
-	std::string def;
+	std::string def = "#version 300 es\n";
 
 	if (_lod_num == 1)
 		def += "#define FIRST_LOD\n";
 
-	auto program = backend::Device::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
+	auto program = backend::DriverBase::getInstance()->newProgram(def + vertexSource, def + fragmentSource);
 	program->autorelease();
 	_programStateShadow = new backend::ProgramState(program);
 

@@ -1,27 +1,21 @@
-attribute float a_height;
-attribute float a_vertex_x;
-attribute float a_vertex_z;
 
-uniform mat4 u_VPMatrix;
+in float a_height;
+in float a_vertex_x;
+in float a_vertex_z;
 
-uniform vec3 u_scale;
+layout(std140) uniform vs_ub {
+    uniform mat4 u_VPMatrix;
+
+    uniform vec3 u_scale;
+    #ifndef FIRST_LOD
+        uniform vec4 u_Ndraw;
+        uniform vec3 u_lod_radius;
+    #endif
+    uniform vec3 u_camPos;
+};
+
 #ifndef FIRST_LOD
-    uniform vec4 u_Ndraw;
-    uniform vec3 u_lod_radius;
-#endif
-uniform vec3 u_camPos;
-
-#ifdef GL_ES
-    precision mediump float;
-    
-    #ifndef FIRST_LOD
-        varying mediump float v_lod_alpha;
-    #endif
-#else
-
-    #ifndef FIRST_LOD
-        varying float v_lod_alpha;
-    #endif
+    out float v_lod_alpha;
 #endif
 
 void main()

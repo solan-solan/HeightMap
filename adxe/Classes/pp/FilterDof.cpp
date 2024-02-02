@@ -1,7 +1,7 @@
 #include "FilterDof.h"
 #include "RenderTexture3D.h"
 #include "cocos2d.h"
-#include "renderer/backend/Device.h"
+#include "renderer/backend/DriverBase.h"
 
 using namespace cocos2d;
 using namespace pp;
@@ -16,7 +16,7 @@ bool FilterDof::init(const cocos2d::Vec4& clip_plane, int radius)
 	std::string vert_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/sprite_render.vert");
 	std::string fr_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/dof.frag");
 
-	auto program = backend::Device::getInstance()->newProgram(vert_sh, fr_sh);
+	auto program = backend::DriverBase::getInstance()->newProgram(vert_sh, fr_sh);
 	_programState = new backend::ProgramState(program);
 
 	initLayout();

@@ -1,19 +1,16 @@
+
 precision highp float;
 
-uniform vec4 u_color;
+out vec4 FragColor;
 
-#ifdef GL_ES
-    precision mediump float;
+layout(std140) uniform fs_ub {
+    uniform vec4 u_color;
+};
 
-    #ifndef FIRST_LOD
-        varying mediump float v_lod_alpha;
-    #endif
-#else
-
-    #ifndef FIRST_LOD
-        varying float v_lod_alpha;
-    #endif
+#ifndef FIRST_LOD
+    in float v_lod_alpha;
 #endif
+
 
 void main()
 {
@@ -23,5 +20,5 @@ void main()
     color.a *= v_lod_alpha;
 #endif
 
-    gl_FragColor = color;
+    FragColor = color;
 }

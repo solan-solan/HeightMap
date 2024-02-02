@@ -1,14 +1,13 @@
+#version 300 es
 
-attribute vec3 a_position;
-attribute vec2 a_texCoord;
+in vec3 a_position;
+in vec2 a_texCoord;
 
-#ifdef GL_ES
-varying mediump vec2 v_texCoord;
-#else
-varying vec2 v_texCoord;
-#endif
+out vec2 v_texCoord;
 
-uniform mat4 u_MVPMatrix;
+layout(std140) uniform vs_ub {
+    uniform mat4 u_MVPMatrix;
+};
 
 void main()
 {

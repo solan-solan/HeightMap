@@ -52,7 +52,7 @@ if(NOT DEFINED BUILD_ENGINE_DONE) # to test HelloCpp into root project
         message(FATAL_ERROR "Please run setup.ps1 add system env var 'AX_ROOT' to specific the engine root")
     endif()
 
-    set(CMAKE_MODULE_PATH ${_AX_ROOT}/cmake/)
+    set(CMAKE_MODULE_PATH ${_AX_ROOT}/cmake/Modules/)
 
     include(AXBuildSet)
     set(_AX_USE_PREBUILT FALSE)
@@ -205,7 +205,7 @@ if(APPLE)
     #set_xcode_property(${APP_NAME} DEVELOPMENT_TEAM "GRLXXXX2K9")
 elseif(WINDOWS)
     if((NOT _AX_USE_PREBUILT) AND (NOT WINRT))
-        ax_copy_target_dll(${APP_NAME})
+        ax_sync_target_dlls(${APP_NAME})
     endif()
 endif()
 
@@ -228,7 +228,7 @@ endif()
 if (_AX_USE_PREBUILT) # support windows and linux
     use_ax_compile_define(${APP_NAME})
 
-    include(${_AX_ROOT}/cmake/AXLinkHelpers.cmake)
+    include(AXLinkHelpers)
     ax_link_cxx_prebuilt(${APP_NAME} ${_AX_ROOT} ${AX_PREBUILT_DIR})
 endif()
 
@@ -236,6 +236,4 @@ if (NOT DEFINED BUILD_ENGINE_DONE)
     ax_uwp_set_all_targets_deploy_min_version()
 endif()
 
-if (WASM)
-    ax_setup_wasm_app_config(${APP_NAME})
-endif()
+ax_setup_app_props(${APP_NAME})

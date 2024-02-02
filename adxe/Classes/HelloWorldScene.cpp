@@ -30,7 +30,7 @@
 #include "pp/RenderTexture3D.h"
 #include "SkinBatch.h"
 
-#include "renderer/backend/Device.h"
+#include "renderer/backend/DriverBase.h"
 
 USING_NS_CC;
 

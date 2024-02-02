@@ -1,38 +1,32 @@
+
 precision highp float;
 precision highp int;
 
-#ifdef GL_ES
-    precision mediump float;
-    #ifdef SHADOW
-        varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying mediump float v_shadow_fade_dist;
-    #endif
-    varying mediump vec2 v_texCoord;
-    varying mediump vec3 v_normal;
-    varying mediump float v_dist_alpha;
-    varying highp float v_texIdx;
-#else
-    #ifdef SHADOW
-        varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying float v_shadow_fade_dist;
-    #endif
-    varying vec2 v_texCoord;
-    varying vec3 v_normal;
-    varying float v_dist_alpha;
-    varying highp float v_texIdx;
-#endif
-
-uniform sampler2D u_texture[GRASS_TEXT_COUNT];
-uniform vec3 u_DirLight;
-uniform vec3 u_DirColLight;
-uniform vec3 u_AmbColLight;
+out vec4 FragColor;
 
 #ifdef SHADOW
-    uniform sampler2D u_text_sh[DEPTH_TEXT_COUNT];
-    uniform vec2 u_texelSize_sh[DEPTH_TEXT_COUNT];
-    uniform float u_smooth_rate_sh;
-    uniform float u_light_thr_sh; 
+    in vec4 v_smcoord[DEPTH_TEXT_COUNT];
+    in float v_shadow_fade_dist;
 #endif
+in vec2 v_texCoord;
+in vec3 v_normal;
+in float v_dist_alpha;
+in float v_texIdx;
+
+uniform sampler2D u_texture[GRASS_TEXT_COUNT];
+
+layout(std140) uniform fs_ub {
+    uniform vec3 u_DirLight;
+    uniform vec3 u_DirColLight;
+    uniform vec3 u_AmbColLight;
+
+    #ifdef SHADOW
+        uniform sampler2D u_text_sh[DEPTH_TEXT_COUNT];
+        uniform vec2 u_texelSize_sh[DEPTH_TEXT_COUNT];
+        uniform float u_smooth_rate_sh;
+        uniform float u_light_thr_sh; 
+    #endif
+};
 
 #ifdef SHADOW
     float shadowCalc()
@@ -56,7 +50,7 @@ uniform vec3 u_AmbColLight;
                 {
                      for (float y = -u_smooth_rate_sh; y <= u_smooth_rate_sh; y += 1.0)
                     {
-                        float distanceFromLight = texture2D(u_text_sh[i], shMapPos.st + vec2(x, y) * texelSize).z;
+                        float distanceFromLight = texture(u_text_sh[i], shMapPos.st + vec2(x, y) * texelSize).z;
 
                         // 1.0 = not in shadow (fragment is closer to light than the value stored in shadow map)
                         // 0.0 = in shadow
@@ -84,8 +78,8 @@ vec3 computeLighting(vec3 normalVector, vec3 lightDirection)
 void main(void)
 {
 	vec4 combinedColor = vec4(computeLighting(v_normal, -u_DirLight) + u_AmbColLight, 1.0);
-	//vec4 px_col = texture2D(u_texture[int(step(0.5, v_texIdx))], v_texCoord);
-    vec4 px_col = texture2D(u_texture[0], v_texCoord) * (1.0 - v_texIdx) + texture2D(u_texture[1], v_texCoord) * v_texIdx;
+	//vec4 px_col = texture(u_texture[int(step(0.5, v_texIdx))], v_texCoord);
+    vec4 px_col = texture(u_texture[0], v_texCoord) * (1.0 - v_texIdx) + texture(u_texture[1], v_texCoord) * v_texIdx;
 	if (px_col.a < 0.5) discard;
 
 #ifdef SHADOW
@@ -99,5 +93,5 @@ void main(void)
 #endif
 
     px_col.a *= v_dist_alpha;
-	gl_FragColor = px_col * combinedColor;
+	FragColor = px_col * combinedColor;
 }

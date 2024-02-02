@@ -1,7 +1,7 @@
 #include "FilterBase.h"
 #include "RenderTexture3D.h"
 #include "RTSprite.h"
-#include "renderer/backend/Device.h"
+#include "renderer/backend/DriverBase.h"
 
 using namespace cocos2d;
 using namespace pp;
@@ -59,7 +59,7 @@ void FilterBase::init()
 	std::string vert_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/sprite_render.vert");
 	std::string fr_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/render_scene.frag");
 
-	auto program = backend::Device::getInstance()->newProgram(vert_sh, fr_sh);
+	auto program = backend::DriverBase::getInstance()->newProgram(vert_sh, fr_sh);
 	_programState = new backend::ProgramState(program);
 
 	initLayout();

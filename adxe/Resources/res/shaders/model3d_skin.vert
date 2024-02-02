@@ -1,60 +1,62 @@
-#ifdef USE_NORMAL_MAPPING
-#if (MAX_DIRECTIONAL_LIGHT_NUM > 0)
-uniform vec3 u_DirLightSourceDirection[MAX_DIRECTIONAL_LIGHT_NUM];
-#endif
-#endif
-#if (MAX_POINT_LIGHT_NUM > 0)
-uniform vec3 u_PointLightSourcePosition[MAX_POINT_LIGHT_NUM];
-#endif
-#if (MAX_SPOT_LIGHT_NUM > 0)
-uniform vec3 u_SpotLightSourcePosition[MAX_SPOT_LIGHT_NUM];
-#ifdef USE_NORMAL_MAPPING
-uniform vec3 u_SpotLightSourceDirection[MAX_SPOT_LIGHT_NUM];
-#endif
-#endif
 
-attribute vec3 a_position;
+layout(std140) uniform vs_ub {
+    #ifdef USE_NORMAL_MAPPING
+        #if (MAX_DIRECTIONAL_LIGHT_NUM > 0)
+            uniform vec3 u_DirLightSourceDirection[MAX_DIRECTIONAL_LIGHT_NUM];
+        #endif
+    #endif
+    #if (MAX_POINT_LIGHT_NUM > 0)
+        uniform vec3 u_PointLightSourcePosition[MAX_POINT_LIGHT_NUM];
+    #endif
+    #if (MAX_SPOT_LIGHT_NUM > 0)
+        uniform vec3 u_SpotLightSourcePosition[MAX_SPOT_LIGHT_NUM];
+        #ifdef USE_NORMAL_MAPPING
+            uniform vec3 u_SpotLightSourceDirection[MAX_SPOT_LIGHT_NUM];
+        #endif
+    #endif
 
-attribute vec4 a_blendWeight;
-attribute vec4 a_blendIndex;
-
-attribute vec2 a_texCoord;
-attribute vec2 a_texCoord1;
-
-attribute vec3 a_normal;
-#ifdef USE_NORMAL_MAPPING
-attribute vec3 a_tangent;
-attribute vec3 a_binormal;
-#endif
-
-// Uniforms
-uniform mat4 u_PMatrix;
+    uniform mat4 u_PMatrix;
+    uniform float u_ft_size;
+    uniform float u_mesh_bone_num;
+};
 uniform sampler2D u_tex_f;
-uniform float u_ft_size;
-uniform float u_mesh_bone_num;
+
+in vec3 a_position;
+
+in vec4 a_blendWeight;
+in vec4 a_blendIndex;
+
+in vec2 a_texCoord;
+in vec2 a_texCoord1;
+
+in vec3 a_normal;
+#ifdef USE_NORMAL_MAPPING
+    in vec3 a_tangent;
+    in vec3 a_binormal;
+#endif
 
 // Varyings
-varying vec2 TextureCoordOut;
+out vec2 TextureCoordOut;
 
 #ifdef USE_NORMAL_MAPPING
-#if MAX_DIRECTIONAL_LIGHT_NUM
-varying vec3 v_dirLightDirection[MAX_DIRECTIONAL_LIGHT_NUM];
-#endif
+    #if MAX_DIRECTIONAL_LIGHT_NUM
+        out vec3 v_dirLightDirection[MAX_DIRECTIONAL_LIGHT_NUM];
+    #endif
 #endif
 #if MAX_POINT_LIGHT_NUM
-varying vec3 v_vertexToPointLightDirection[MAX_POINT_LIGHT_NUM];
+    out vec3 v_vertexToPointLightDirection[MAX_POINT_LIGHT_NUM];
 #endif
 #if MAX_SPOT_LIGHT_NUM
-varying vec3 v_vertexToSpotLightDirection[MAX_SPOT_LIGHT_NUM];
-#ifdef USE_NORMAL_MAPPING
-varying vec3 v_spotLightDirection[MAX_SPOT_LIGHT_NUM];
-#endif
+    out vec3 v_vertexToSpotLightDirection[MAX_SPOT_LIGHT_NUM];
+    #ifdef USE_NORMAL_MAPPING
+        out vec3 v_spotLightDirection[MAX_SPOT_LIGHT_NUM];
+    #endif
 #endif
 
 #ifndef USE_NORMAL_MAPPING
-#if ((MAX_DIRECTIONAL_LIGHT_NUM > 0) || (MAX_POINT_LIGHT_NUM > 0) || (MAX_SPOT_LIGHT_NUM > 0))
-varying vec3 v_normal;
-#endif
+    #if ((MAX_DIRECTIONAL_LIGHT_NUM > 0) || (MAX_POINT_LIGHT_NUM > 0) || (MAX_SPOT_LIGHT_NUM > 0))
+        out vec3 v_normal;
+    #endif
 #endif
 
 int delta_patch;
@@ -62,7 +64,7 @@ int delta_patch;
 vec4 readFT(int index)
 {
     vec2 coord = vec2(mod(float(index), u_ft_size) / u_ft_size, float(index / int(u_ft_size)) / u_ft_size);
-    return texture2D(u_tex_f, coord);
+    return texture(u_tex_f, coord);
 }
 
 void getPositionAndNormal(out vec4 position, out vec3 normal, out vec3 tangent, out vec3 binormal)

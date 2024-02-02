@@ -1,104 +1,83 @@
-attribute float a_height;
-attribute float a_npack;
-attribute float a_vertex_x;
-attribute float a_vertex_z;
+// Definitions
+#define vvec2_def(x, y) vec4 x[(y * 2 + 3) / 4]
+#define vvec2_at1(x, y, z) x[(y / 2)][y % 2 * 2 + z]
+#define vvec2_at(x, y) vec2(vvec2_at1(x, y, 0), vvec2_at1(x, y, 1))
+//
+
+
+in float a_height;
+in float a_npack;
+in float a_vertex_x;
+in float a_vertex_z;
 #if MAX_LAYER_COUNT == 4
-    attribute vec4 a_alpha;
+    in vec4 a_alpha;
 #elif MAX_LAYER_COUNT == 3
-    attribute vec3 a_alpha;
+    in vec3 a_alpha;
 #elif MAX_LAYER_COUNT == 2
-    attribute vec2 a_alpha;
+    in vec2 a_alpha;
 #elif MAX_LAYER_COUNT == 1
-    attribute float a_alpha;
+    in float a_alpha;
 #endif
+
+layout(std140) uniform vs_ub {
+    #ifdef SHADOW
+        uniform mat4 u_lVP_sh[DEPTH_TEXT_COUNT];
+        uniform float u_shadow_fade_dist;
+    #endif
+
+    uniform vec3 u_camPos;
+    uniform mat4 u_VPMatrix;
+    #ifndef FIRST_LOD
+        uniform vec4 u_Ndraw;
+        uniform vec3 u_lod_radius;
+    #endif
+    uniform float u_layer_num;
+    vvec2_def(u_text_tile_size, LAYER_TEXTURE_SIZE);
+    uniform vec3 u_scale;
+    uniform float u_darker_dist;
+    #ifdef TEXT_LOD
+        uniform vec2 u_text_lod_distance;
+    #endif
+    #ifdef MULTI_LAYER
+        uniform vec2 u_dist_alpha_layer;
+    #endif
+
+    #ifdef FOG
+        uniform float u_near_fog_plane;
+        uniform float u_far_fog_plane;
+    #endif
+
+    #ifdef NORMAL_MAP
+        uniform vec3 u_DirLightSun;
+    #endif
+};
 
 #ifdef SHADOW
-    uniform mat4 u_lVP_sh[DEPTH_TEXT_COUNT];
-    uniform float u_shadow_fade_dist;
+    out vec4 v_smcoord[DEPTH_TEXT_COUNT];
+    out float v_shadow_fade_dist;
 #endif
-
-uniform vec3 u_camPos;
-uniform mat4 u_VPMatrix;
+out vec2 v_texCoord[LAYER_TEXTURE_SIZE];
 #ifndef FIRST_LOD
-    uniform vec4 u_Ndraw;
-    uniform vec3 u_lod_radius;
+    out float v_lod_alpha;
 #endif
-uniform float u_layer_num;
-uniform vec2 u_text_tile_size[LAYER_TEXTURE_SIZE];
-uniform vec3 u_scale;
-uniform float u_darker_dist;
 #ifdef TEXT_LOD
-    uniform vec2 u_text_lod_distance;
+    out vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
+    out float v_dist_alpha;
 #endif
 #ifdef MULTI_LAYER
-    uniform vec2 u_dist_alpha_layer;
+    out float v_dist_alpha_layer;
+    out float v_layer_alpha;
 #endif
-
+out float v_darker_dist;
 #ifdef FOG
-    uniform float u_near_fog_plane;
-    uniform float u_far_fog_plane;
+    out float v_fogFactor;
 #endif
+out vec3 v_dirToCamera;
+out vec3 v_normal;
+out float v_alpha[LAYER_TEXTURE_SIZE];
 
 #ifdef NORMAL_MAP
-    uniform vec3 u_DirLightSun;
-#endif
-
-#ifdef GL_ES
-    #ifdef SHADOW
-        varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying mediump float v_shadow_fade_dist;
-    #endif
-	varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    #ifndef FIRST_LOD
-        varying mediump float v_lod_alpha;
-    #endif
-    #ifdef TEXT_LOD
-        varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
-        varying mediump float v_dist_alpha;
-    #endif
-    #ifdef MULTI_LAYER
-        varying mediump float v_dist_alpha_layer;
-        varying mediump float v_layer_alpha;
-    #endif
-	varying mediump float v_darker_dist;
-    #ifdef FOG
-        varying mediump float v_fogFactor;
-    #endif
-	varying mediump vec3 v_dirToCamera;
-	varying mediump vec3 v_normal;
-    varying mediump float v_alpha[LAYER_TEXTURE_SIZE];
-
-    #ifdef NORMAL_MAP
-        varying mediump vec3 v_DirLightSun;
-    #endif
-#else
-    #ifdef SHADOW
-        varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying float v_shadow_fade_dist;
-    #endif
-	varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    #ifndef FIRST_LOD
-        varying float v_lod_alpha;
-    #endif
-    #ifdef TEXT_LOD
-        varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
-        varying float v_dist_alpha;
-    #endif
-    #ifdef MULTI_LAYER
-        varying float v_dist_alpha_layer;
-        varying float v_layer_alpha;
-    #endif
-	varying float v_darker_dist;
-    #ifdef FOG
-        varying float v_fogFactor;
-    #endif
-	varying vec3 v_dirToCamera;
-	varying vec3 v_normal;
-    varying float v_alpha[LAYER_TEXTURE_SIZE];
-
-    #ifdef NORMAL_MAP
-        varying vec3 v_DirLightSun;
-    #endif
+    out vec3 v_DirLightSun;
 #endif
 
 void main()
@@ -131,12 +110,12 @@ void main()
 
     for (int i = 0; i < LAYER_TEXTURE_SIZE; ++i)
     {
-        float text_tile_size = u_text_tile_size[i].x;
+        float text_tile_size = vvec2_at(u_text_tile_size, i).x;//u_text_tile_size[i].x;
         v_texCoord[i] = vec2((x + text_tile_size) / (2.0 * text_tile_size), 
             (z + text_tile_size) / (2.0 * text_tile_size));
 
         #ifdef TEXT_LOD
-            text_tile_size = u_text_tile_size[i].y;
+            text_tile_size = vvec2_at(u_text_tile_size, i).y;
             v_texCoord_lod[i] = vec2((x + text_tile_size) / (2.0 * text_tile_size), 
                 (z + text_tile_size) / (2.0 * text_tile_size));
         #endif

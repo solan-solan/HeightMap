@@ -1,5 +1,5 @@
 #include "SkinBatch.h"
-#include "renderer/backend/Device.h"
+#include "renderer/backend/DriverBase.h"
 #include "hm/HeightMap.h"
 
 using namespace cocos2d;
@@ -80,10 +80,10 @@ bool SkinBatch::init()
         false, 0);
 
     // Create shader
-    std::string def_model_sh = "#define MAX_DIRECTIONAL_LIGHT_NUM 1\n#define MAX_POINT_LIGHT_NUM 0\n#define MAX_SPOT_LIGHT_NUM 0\n";
+    std::string def_model_sh = "#version 300 es\n#define MAX_DIRECTIONAL_LIGHT_NUM 1\n#define MAX_POINT_LIGHT_NUM 0\n#define MAX_SPOT_LIGHT_NUM 0\n";
     std::string vertexSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename(_vert_shader));
     std::string fragmentSource = FileUtils::getInstance()->getStringFromFile(FileUtils::getInstance()->fullPathForFilename(_frag_shader));
-    auto* program = ax::backend::Device::getInstance()->newProgram(def_model_sh + vertexSource, def_model_sh + fragmentSource);
+    auto* program = ax::backend::DriverBase::getInstance()->newProgram(def_model_sh + vertexSource, def_model_sh + fragmentSource);
     program->autorelease();
 
     auto* prState = new ax::backend::ProgramState(program);

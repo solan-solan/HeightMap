@@ -1,48 +1,39 @@
-attribute vec4 a_position;
-attribute vec2 a_color;
-attribute vec2 a_texCoord;
-attribute float a_texIdx;
-attribute float a_size;
-attribute float a_patch_num;
 
-uniform vec3  u_up;
-uniform vec3  u_right;
+in vec4 a_position;
+in vec2 a_color;
+in vec2 a_texCoord;
+in float a_texIdx;
+in float a_size;
+in float a_patch_num;
 
-uniform mat4 u_VPMatrix;
-uniform float u_time;
+layout(std140) uniform vs_ub {
+    uniform vec3  u_up;
+    uniform vec3  u_right;
 
-uniform float u_speed;
-uniform vec3  u_scale;
-uniform float u_patch_x_count;
-uniform float u_patch_y_count;
-uniform vec3 u_cam_pos;
-uniform vec2 u_dist_alpha;
+    uniform mat4 u_VPMatrix;
+    uniform float u_time;
+
+    uniform float u_speed;
+    uniform vec3  u_scale;
+    uniform float u_patch_x_count;
+    uniform float u_patch_y_count;
+    uniform vec3 u_cam_pos;
+    uniform vec2 u_dist_alpha;
+
+    #ifdef SHADOW
+        uniform mat4 u_lVP_sh[DEPTH_TEXT_COUNT];
+        uniform float u_shadow_fade_dist;
+    #endif
+};
 
 #ifdef SHADOW
-    uniform mat4 u_lVP_sh[DEPTH_TEXT_COUNT];
-    uniform float u_shadow_fade_dist;
+    out vec4 v_smcoord[DEPTH_TEXT_COUNT];
+    out float v_shadow_fade_dist;
 #endif
-
-#ifdef GL_ES
-    precision mediump float;
-    #ifdef SHADOW
-        varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying mediump float v_shadow_fade_dist;
-    #endif
-    varying mediump vec2 v_texCoord;
-    varying mediump vec3 v_normal;
-    varying mediump float v_dist_alpha;
-    varying highp float v_texIdx;
-#else
-    #ifdef SHADOW
-        varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying float v_shadow_fade_dist;
-    #endif
-    varying vec2 v_texCoord;
-    varying vec3 v_normal;
-    varying float v_dist_alpha;
-    varying highp float v_texIdx;
-#endif
+out vec2 v_texCoord;
+out vec3 v_normal;
+out float v_dist_alpha;
+out float v_texIdx;
 
 void main()
 {

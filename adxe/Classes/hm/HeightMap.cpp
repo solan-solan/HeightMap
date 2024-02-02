@@ -1,6 +1,6 @@
 #include "HeightMap.h"
 #include "rjh.h"
-#include "renderer/backend/Device.h"
+#include "renderer/backend/DriverBase.h"
 #include "ShadowCamera.h"
 #include "../pp/RenderTexture3D.h"
 
@@ -583,11 +583,11 @@ void HeightMap::createGrassShader()
 	std::string vert_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/grass_bb.vert");
 	std::string fr_sh = FileUtils::getInstance()->getStringFromFile("res/shaders/grass_bb.frag");
 	
-	std::string def = StringUtils::format("#define GRASS_TEXT_COUNT %i\n", _grass_prop._text_count);
+	std::string def = StringUtils::format("#version 300 es\n#define GRASS_TEXT_COUNT %i\n", _grass_prop._text_count);
 	if (_grass_prop._shadow.enable)
 		def += StringUtils::format("#define SHADOW\n#define DEPTH_TEXT_COUNT %i\n", _shdw.size());
 
-	auto program = backend::Device::getInstance()->newProgram(def + vert_sh, def + fr_sh);
+	auto program = backend::DriverBase::getInstance()->newProgram(def + vert_sh, def + fr_sh);
 	program->autorelease();
 	_programState = new backend::ProgramState(program);
 

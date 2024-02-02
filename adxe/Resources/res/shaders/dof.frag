@@ -1,21 +1,22 @@
+#version 300 es
+
 precision highp float;
 
-#ifdef GL_ES
-precision lowp float;
-#endif
-
-varying vec2 v_texCoord;
+out vec4 FragColor;
+in vec2 v_texCoord;
 
 uniform sampler2D u_texture;
 uniform sampler2D u_texture_depth;
 
-uniform vec4 u_texel_clipplane;
-uniform int u_blur_radius;
-uniform float u_coef_dist;
+layout(std140) uniform fs_ub {
+    uniform vec4 u_texel_clipplane;
+    uniform int u_blur_radius;
+    uniform float u_coef_dist;
+};
 
 float sample_linear_depth(vec2 texC)
 {
-    float fDepth = texture2D( u_texture_depth, texC ).x;
+    float fDepth = texture( u_texture_depth, texC ).x;
 
     return /*0.5 **/ u_texel_clipplane.z * u_texel_clipplane.w / 
         ( u_texel_clipplane.w - fDepth * (u_texel_clipplane.w - u_texel_clipplane.z) );
@@ -23,11 +24,10 @@ float sample_linear_depth(vec2 texC)
 
 void main()
 {
-
     float fDepth = sample_linear_depth(v_texCoord.st); // get start point depth
 
     float fMultiplier = (float(u_blur_radius) + 1.0);
-    vec4 vColor = texture2D(u_texture, v_texCoord.st) * fMultiplier; // get start point color
+    vec4 vColor = texture(u_texture, v_texCoord.st) * fMultiplier; // get start point color
 
     for (int k = 1; k <= u_blur_radius; k++)
     {
@@ -48,12 +48,12 @@ void main()
         // Coeff to control blur with respect to depth
         float fDepthCoeff = (fDepth / u_texel_clipplane.w) * u_coef_dist;
 
-        vColor += texture2D(u_texture, v_texCoord.st + u_texel_clipplane.xy * fStep ) * fScale * fNextDiff * fDepthCoeff;
-        vColor += texture2D(u_texture, v_texCoord.st - u_texel_clipplane.xy * fStep ) * fScale * fPrevDiff * fDepthCoeff;
+        vColor += texture(u_texture, v_texCoord.st + u_texel_clipplane.xy * fStep ) * fScale * fNextDiff * fDepthCoeff;
+        vColor += texture(u_texture, v_texCoord.st - u_texel_clipplane.xy * fStep ) * fScale * fPrevDiff * fDepthCoeff;
 
         // Calculate depth multiplier
         fMultiplier += fScale * (fPrevDiff + fNextDiff) * fDepthCoeff;
     };
 
-    gl_FragColor = vec4( vColor.xyz / fMultiplier, 1.0 );
+    FragColor = vec4( vColor.xyz / fMultiplier, 1.0 );
 }

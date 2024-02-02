@@ -1,93 +1,89 @@
+
 precision highp float;
 
-#ifdef GL_ES
-    precision mediump float;
+out vec4 FragColor;
 
-    #ifdef SHADOW
-        varying mediump vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying mediump float v_shadow_fade_dist;
-    #endif
+//-- Definitions
+#define vfloat_def(x, y) vec4 x[(y + 3) / 4]
+#define vfloat_at(x, y) x[y / 4][y % 4]
 
-    varying mediump vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    #ifndef FIRST_LOD
-        varying mediump float v_lod_alpha;
-    #endif
-    #ifdef TEXT_LOD
-        varying mediump vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
-        varying mediump float v_dist_alpha;
-    #endif
-    #ifdef MULTI_LAYER
-        varying mediump float v_dist_alpha_layer;
-        varying mediump float v_layer_alpha;
-    #endif
-    varying mediump float v_darker_dist;
-    #ifdef FOG
-        varying mediump float v_fogFactor;
-    #endif
-    varying mediump vec3 v_dirToCamera;
-    
-    varying mediump float v_alpha[LAYER_TEXTURE_SIZE];
+#define COLOR(NUM, max_v_alpha, color, specular_factor) \
+    max_v_alpha = max(max_v_alpha, v_alpha[NUM]); \
+    color += texture(u_text[NUM], v_texCoord[NUM]) * v_alpha[NUM]; \
+    specular_factor += vfloat_at(u_specular_factor, NUM) * v_alpha[NUM]
 
-    #ifdef NORMAL_MAP
-        varying mediump vec3 v_DirLightSun;
-    #else
-        varying mediump vec3 v_normal;
-    #endif
-#else
+#define COLOR_LOD(NUM, color_lod) \
+    color_lod += texture(u_text[NUM], v_texCoord_lod[NUM]) * v_alpha[NUM]
 
-    #ifdef SHADOW
-        varying vec4 v_smcoord[DEPTH_TEXT_COUNT];
-        varying float v_shadow_fade_dist;
-    #endif
+#define NORMAL(NUM, normal, normal_scale) \
+    normal += (2.0 * texture(u_text_n[NUM], v_texCoord[NUM]).xyz - 1.0) * v_alpha[NUM]; \
+    normal_scale += vfloat_at(u_normal_scale, NUM) * v_alpha[NUM]
 
-    varying vec2 v_texCoord[LAYER_TEXTURE_SIZE];
-    #ifndef FIRST_LOD
-        varying float v_lod_alpha;
-    #endif
-    #ifdef TEXT_LOD
-        varying vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
-        varying float v_dist_alpha;
-    #endif
-    #ifdef MULTI_LAYER
-        varying float v_dist_alpha_layer;
-        varying float v_layer_alpha;
-    #endif
-    varying float v_darker_dist;
-    #ifdef FOG
-        varying float v_fogFactor;
-    #endif
-    varying vec3 v_dirToCamera;
-
-    varying float v_alpha[LAYER_TEXTURE_SIZE];
-
-    #ifdef NORMAL_MAP
-        varying vec3 v_DirLightSun;
-    #else
-        varying vec3 v_normal;
-    #endif
-#endif
-
-    uniform sampler2D u_text[LAYER_TEXTURE_SIZE];
-
-#ifdef NORMAL_MAP
-    uniform sampler2D u_text_n[LAYER_TEXTURE_SIZE];
-    uniform float u_normal_scale[LAYER_TEXTURE_SIZE];
-#endif
+#define NORMAL_COLOR_LOD(NUM, normal, normal_scale, normal_lod) \
+    normal += (2.0 * texture(u_text_n[NUM], v_texCoord[NUM]).xyz - 1.0) * v_alpha[NUM]; \
+    normal_scale += vfloat_at(u_normal_scale, NUM) * v_alpha[NUM]; \
+    normal_lod += (2.0 * texture(u_text_n[NUM], v_texCoord_lod[NUM]).xyz - 1.0) * v_alpha[NUM]
+//--
 
 #ifdef SHADOW
-    uniform sampler2D u_text_sh[DEPTH_TEXT_COUNT];
-    uniform vec2 u_texelSize_sh[DEPTH_TEXT_COUNT];
-    uniform float u_smooth_rate_sh;
-    uniform float u_light_thr_sh; 
+    in vec4 v_smcoord[DEPTH_TEXT_COUNT];
+    in float v_shadow_fade_dist;
 #endif
 
-#ifndef NORMAL_MAP
-    uniform vec3 u_DirLightSun;
+in vec2 v_texCoord[LAYER_TEXTURE_SIZE];
+#ifndef FIRST_LOD
+    in float v_lod_alpha;
 #endif
+#ifdef TEXT_LOD
+    in vec2 v_texCoord_lod[LAYER_TEXTURE_SIZE];
+    in float v_dist_alpha;
+#endif
+#ifdef MULTI_LAYER
+    in float v_dist_alpha_layer;
+    in float v_layer_alpha;
+#endif
+in float v_darker_dist;
+#ifdef FOG
+    in float v_fogFactor;
+#endif
+in vec3 v_dirToCamera;
+
+in float v_alpha[LAYER_TEXTURE_SIZE];
+
+#ifdef NORMAL_MAP
+    in vec3 v_DirLightSun;
+#else
+    in vec3 v_normal;
+#endif
+
+uniform sampler2D u_text[LAYER_TEXTURE_SIZE];
+#ifdef NORMAL_MAP
+    uniform sampler2D u_text_n[LAYER_TEXTURE_SIZE];
+#endif
+#ifdef SHADOW
+    uniform sampler2D u_text_sh[DEPTH_TEXT_COUNT]; 
+#endif
+
+layout(std140) uniform fs_ub {
+    #ifdef NORMAL_MAP
+        vfloat_def(u_normal_scale, LAYER_TEXTURE_SIZE);
+    #endif
+
+    #ifdef SHADOW
+        vfloat_def(u_texelSize_sh, DEPTH_TEXT_COUNT);
+        uniform float u_smooth_rate_sh;
+        uniform float u_light_thr_sh; 
+    #endif
+
+    #ifndef NORMAL_MAP
+        uniform vec3 u_DirLightSun;
+    #endif
     uniform vec3 u_ColLightSun;
     uniform vec3 u_ColFog;
     uniform vec3 u_AmbientLightSourceColor;
-    uniform float u_specular_factor[LAYER_TEXTURE_SIZE];
+    vfloat_def(u_specular_factor, LAYER_TEXTURE_SIZE);
+};
+
 
 #ifdef SHADOW
     float shadowCalc()
@@ -111,7 +107,7 @@ precision highp float;
                 {
                      for (float y = -u_smooth_rate_sh; y <= u_smooth_rate_sh; y += 1.0)
                     {
-                        float distanceFromLight = texture2D(u_text_sh[i], shMapPos.st + vec2(x, y) * texelSize).z;
+                        float distanceFromLight = texture(u_text_sh[i], shMapPos.st + vec2(x, y) * texelSize).z;
 
                         // 1.0 = not in shadow (fragment is closer to light than the value stored in shadow map)
                         // 0.0 = in shadow
@@ -160,25 +156,82 @@ void main()
         #endif
     #endif
     float max_v_alpha = 0.0;
-    for (int i = 0; i < LAYER_TEXTURE_SIZE; ++i)
+
+    // Process texture data
+    COLOR(0, max_v_alpha, color, specular_factor);
+    #ifdef TEXT_LOD
+        COLOR_LOD(0, color_lod);
+    #endif
+    #ifdef NORMAL_MAP
+        #ifdef TEXT_LOD
+            NORMAL_COLOR_LOD(0, normal, normal_scale, normal_lod);
+        #else
+            NORMAL(0, normal, normal_scale);
+        #endif
+    #endif
+
+    #if (LAYER_TEXTURE_SIZE > 1)
+        COLOR(1, max_v_alpha, color, specular_factor);
+        #ifdef TEXT_LOD
+            COLOR_LOD(1, color_lod);
+        #endif
+        #ifdef NORMAL_MAP
+            #ifdef TEXT_LOD
+                NORMAL_COLOR_LOD(1, normal, normal_scale, normal_lod);
+            #else
+                NORMAL(1, normal, normal_scale);
+            #endif
+        #endif
+    #endif
+
+    #if (LAYER_TEXTURE_SIZE > 2)
+        COLOR(2, max_v_alpha, color, specular_factor);
+        #ifdef TEXT_LOD
+            COLOR_LOD(2, color_lod);
+        #endif
+        #ifdef NORMAL_MAP
+            #ifdef TEXT_LOD
+                NORMAL_COLOR_LOD(2, normal, normal_scale, normal_lod);
+            #else
+                NORMAL(2, normal, normal_scale);
+            #endif
+        #endif
+    #endif
+
+    #if (LAYER_TEXTURE_SIZE > 3)
+        COLOR(3, max_v_alpha, color, specular_factor);
+        #ifdef TEXT_LOD
+            COLOR_LOD(3, color_lod);
+        #endif
+        #ifdef NORMAL_MAP
+            #ifdef TEXT_LOD
+                NORMAL_COLOR_LOD(3, normal, normal_scale, normal_lod);
+            #else
+                NORMAL(3, normal, normal_scale);
+            #endif
+        #endif
+    #endif
+    // End Process texture data
+
+/*    for (int i = 0; i < LAYER_TEXTURE_SIZE; ++i)
     {
         max_v_alpha = max(max_v_alpha, v_alpha[i]);
-        color += texture2D(u_text[i], v_texCoord[i]) * v_alpha[i];
+        color += texture(u_text[i], v_texCoord[i]) * v_alpha[i];
         specular_factor += u_specular_factor[i] * v_alpha[i];
 
     #ifdef TEXT_LOD
-        color_lod += texture2D(u_text[i], v_texCoord_lod[i]) * v_alpha[i];
+        color_lod += texture(u_text[i], v_texCoord_lod[i]) * v_alpha[i];
     #endif
 
     #ifdef NORMAL_MAP
-        normal += (2.0 * texture2D(u_text_n[i], v_texCoord[i]).xyz - 1.0) * v_alpha[i];
+        normal += (2.0 * texture(u_text_n[i], v_texCoord[i]).xyz - 1.0) * v_alpha[i];
         normal_scale += u_normal_scale[i] * v_alpha[i];
 
         #ifdef TEXT_LOD
-            normal_lod += (2.0 * texture2D(u_text_n[i], v_texCoord_lod[i]).xyz - 1.0) * v_alpha[i];
+            normal_lod += (2.0 * texture(u_text_n[i], v_texCoord_lod[i]).xyz - 1.0) * v_alpha[i];
         #endif
     #endif
-    }
+    }*/
 
     #ifdef TEXT_LOD
         color = mix(color_lod, color, v_dist_alpha);
@@ -228,5 +281,5 @@ void main()
     color.a *= v_lod_alpha;
 #endif
 
-    gl_FragColor = color;
+    FragColor = color;
 }

@@ -2,7 +2,7 @@
 #include "cocos2d.h"
 #include "RenderTexture3D.h"
 #include "renderer/backend/CommandBuffer.h"
-#include "renderer/backend/Device.h"
+#include "renderer/backend/DriverBase.h"
 #include "renderer/backend/RenderTarget.h"
 
 using namespace cocos2d;

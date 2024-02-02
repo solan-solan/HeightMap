@@ -1,12 +1,15 @@
-attribute float a_height;
-attribute float a_vertex_x;
-attribute float a_vertex_z;
 
-uniform mat4 u_VPMatrix;
-#ifndef FIRST_LOD
-    uniform vec4 u_Ndraw;
-#endif
-uniform vec3 u_scale;
+in float a_height;
+in float a_vertex_x;
+in float a_vertex_z;
+
+layout(std140) uniform vs_ub {
+    uniform mat4 u_VPMatrix;
+    #ifndef FIRST_LOD
+        uniform vec4 u_Ndraw;
+    #endif
+    uniform vec3 u_scale;
+};
 
 void main()
 {
