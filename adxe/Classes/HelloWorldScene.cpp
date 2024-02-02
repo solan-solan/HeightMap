@@ -476,8 +476,8 @@ void HelloWorld::update(float time)
 
 void HelloWorld::addUi()
 {
-    auto sz = Director::getInstance()->getVisibleSize();
-    float sc_fct = Director::getInstance()->getContentScaleFactor();
+    auto sz = Director::getInstance()->getWinSize();
+    float sc_fct = 1.f / Director::getInstance()->getContentScaleFactor();
 
     //--- Grass
     auto* txt = ui::Text::create("grass", "arial", 24);
@@ -532,18 +532,18 @@ void HelloWorld::addUi()
 
     //--- Speed
     txt = ui::Text::create("speed", "arial", 24);
-    txt->setPosition(Vec2(sz.width / 2.f - 200.f, 50.f));
+    txt->setAnchorPoint(Vec2(0.5f, 0.f));
+    txt->setPosition(Vec2(sz.width / 2.f, 100.f * sc_fct));
     txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
     ui::Slider* sl = ui::Slider::create();
-    sl->setAnchorPoint(Vec2(0.f, 0.5f));
     sl->loadBarTexture("res/ui/sliderTrack.png");
     sl->loadSlidBallTextures("re/ui/sliderThumb.png", "res/ui/sliderThumb.png", "");
     sl->loadProgressBarTexture("res/ui/sliderProgress.png");
     sl->setMaxPercent(10);
-    sl->setPosition(Vec2(sz.width / 2.f, 50.f));
-    sl->setAnchorPoint(Vec2(0.5f, 0.f));
+    sl->setPosition(Vec2(sz.width / 2.f, 100.f * sc_fct));
+    sl->setAnchorPoint(Vec2(0.5f, 1.f));
     sl->addEventListener(AX_CALLBACK_2(HelloWorld::changeSpeed, this));
     sl->setScale(sc_fct);
     sl->setCameraMask((unsigned short)CameraFlag::USER4);
@@ -551,18 +551,18 @@ void HelloWorld::addUi()
 
     //--- Sun
     txt = ui::Text::create("sun", "arial", 24);
-    txt->setPosition(Vec2(sz.width / 2.f - 200.f, sz.height - 50.f));
+    txt->setAnchorPoint(Vec2(0.5f, 0.f));
+    txt->setPosition(Vec2(sz.width / 2.f, sz.height - 100.f * sc_fct));
     txt->setCameraMask((unsigned short)CameraFlag::USER4);
     addChild(txt);
 
     sl = ui::Slider::create();
-    sl->setAnchorPoint(Vec2(0.f, 0.5f));
     sl->loadBarTexture("res/ui/sliderTrack.png");
     sl->loadSlidBallTextures("re/ui/sliderThumb.png", "res/ui/sliderThumb.png", "");
     sl->loadProgressBarTexture("res/ui/sliderProgress.png");
     sl->setMaxPercent(100);
-    sl->setPosition(Vec2(sz.width / 2.f, sz.height - 50.f));
-    sl->setAnchorPoint(Vec2(0.5f, 0.f));
+    sl->setPosition(Vec2(sz.width / 2.f, sz.height - 100.f * sc_fct));
+    sl->setAnchorPoint(Vec2(0.5f, 1.f));
     sl->addEventListener(AX_CALLBACK_2(HelloWorld::sunDir, this));
     sl->setScale(sc_fct);
     sl->setCameraMask((unsigned short)CameraFlag::USER4);
