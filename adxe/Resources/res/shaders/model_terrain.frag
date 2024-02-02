@@ -7,6 +7,10 @@ out vec4 FragColor;
 #define vfloat_def(x, y) vec4 x[(y + 3) / 4]
 #define vfloat_at(x, y) x[y / 4][y % 4]
 
+#define vvec2_def(x, y) vec4 x[(y * 2 + 3) / 4]
+#define vvec2_at1(x, y, z) x[(y / 2)][y % 2 * 2 + z]
+#define vvec2_at(x, y) vec2(vvec2_at1(x, y, 0), vvec2_at1(x, y, 1))
+
 #define COLOR(NUM, max_v_alpha, color, specular_factor) \
     max_v_alpha = max(max_v_alpha, v_alpha[NUM]); \
     color += texture(u_text[NUM], v_texCoord[NUM]) * v_alpha[NUM]; \
@@ -70,7 +74,7 @@ layout(std140) uniform fs_ub {
     #endif
 
     #ifdef SHADOW
-        vfloat_def(u_texelSize_sh, DEPTH_TEXT_COUNT);
+        vvec2_def(u_texelSize_sh, DEPTH_TEXT_COUNT);
         uniform float u_smooth_rate_sh;
         uniform float u_light_thr_sh; 
     #endif
@@ -86,29 +90,66 @@ layout(std140) uniform fs_ub {
 
 
 #ifdef SHADOW
+    vec4 v_smcoord_literal(in int i)
+    {
+        vec4 val;
+        switch(i)
+        {
+            case 0:
+                val = v_smcoord[0] / v_smcoord[0].w;
+                break;
+        #if (DEPTH_TEXT_COUNT > 1)
+            case 1:
+                val = v_smcoord[1] / v_smcoord[1].w;
+                break;
+        #endif
+            default:
+                val = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+        return val;
+    }
+
+    vec4 texture_sh_by_index(in vec2 uv, in int idx)
+    {
+        vec4 val;
+        switch(idx)
+        {
+            case 0:
+                val = texture(u_text_sh[0], uv);
+                break;
+        #if (DEPTH_TEXT_COUNT > 1)
+            case 1:
+                val = texture(u_text_sh[1], uv);
+                break;
+        #endif
+            default:
+                val = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+        return val;
+    }
+
     float shadowCalc()
     {
         float sh_cf[DEPTH_TEXT_COUNT + 1];
         sh_cf[0] = 1.0;
         int sh_cnt = 0;
-        /*float bias = 0.0005; // Add bias to reduce shadow acne (error margin)
+        float bias = 0.0005; // Add bias to reduce shadow acne (error margin)
         for (int i = 0; i < DEPTH_TEXT_COUNT; ++i)
         {
-            vec4 shMapPos = v_smcoord[i] / v_smcoord[i].w;
+            vec4 shMapPos = v_smcoord_literal(i);
 
             if (all(bvec2(all(bvec4(lessThanEqual(shMapPos.xy, vec2(1.0, 1.0)), greaterThanEqual(shMapPos.xy, vec2(0.0, 0.0)))),
                 all(bvec2(step(0.0, shMapPos.z), step(shMapPos.z, 1.0))))))
             {
                 sh_cnt += 1;
                 float shadow = 0.0;
-                vec2 texelSize = 1.0 / u_texelSize_sh[i];
+                vec2 texelSize = 1.0 / vvec2_at(u_texelSize_sh, i);
 
                 for (float x = -u_smooth_rate_sh; x <= u_smooth_rate_sh; x += 1.0)
                 {
-                     for (float y = -u_smooth_rate_sh; y <= u_smooth_rate_sh; y += 1.0)
+                    for (float y = -u_smooth_rate_sh; y <= u_smooth_rate_sh; y += 1.0)
                     {
-                        float distanceFromLight = texture(u_text_sh[i], shMapPos.st + vec2(x, y) * texelSize).z;
-
+                        float distanceFromLight = texture_sh_by_index(shMapPos.st + vec2(x, y) * texelSize, i).r;
                         // 1.0 = not in shadow (fragment is closer to light than the value stored in shadow map)
                         // 0.0 = in shadow
                         shadow += step(shMapPos.z - bias, distanceFromLight);
@@ -118,7 +159,7 @@ layout(std140) uniform fs_ub {
                 shadow /= (u_smooth_rate_sh * 2.0 + 1.0) * (u_smooth_rate_sh * 2.0 + 1.0);
                 sh_cf[sh_cnt] = min(shadow, sh_cf[sh_cnt - 1]);
             }
-        }*/
+        }
         return sh_cf[sh_cnt];
     }
 #endif

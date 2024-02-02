@@ -281,6 +281,7 @@ bool HelloWorld::init()
 
     // Launch to update float texture data
     sb->scheduleUpdate();
+    //====================================================================
 
     // Set skybox
     TextureCube* textureCube = TextureCube::create("res/skybox/left.jpg", "res/skybox/right.jpg",
@@ -752,7 +753,8 @@ void HelloWorld::visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& par
     _director->loadMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW, _modelViewTransform);
 
     // Draw 3d scene to texture
-    _filters[0]->begin();
+    if (_filters.size())
+        _filters[0]->begin();
 
     int i = 0;
     if (!_children.empty())
@@ -773,7 +775,8 @@ void HelloWorld::visit_cmn(cocos2d::Renderer* renderer, const cocos2d::Mat4& par
             (*it)->visit(renderer, _modelViewTransform, flags);
     }
 
-    _filters[0]->end();
+    if (_filters.size())
+        _filters[0]->end();
 
     _director->popMatrix(MATRIX_STACK_TYPE::MATRIX_STACK_MODELVIEW);
 
